@@ -1,20 +1,10 @@
 import { Plus } from 'lucide-react'
-import { formatTodayLong } from '../../lib/format'
+import { formatTodayLong, initials } from '../../lib/format'
 
 interface DashboardHeaderProps {
   professionalName: string
   professionalRole: string
   onNewAppointment?: () => void
-}
-
-function initials(name: string): string {
-  return name
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0])
-    .join('')
-    .toUpperCase()
 }
 
 export function DashboardHeader({
