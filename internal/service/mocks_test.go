@@ -1,0 +1,164 @@
+package service_test
+
+import (
+	"context"
+	"time"
+
+	"github.com/google/uuid"
+
+	"github.com/castilho/health-os/internal/domain/models"
+)
+
+// Hand-rolled function-field fakes for the repository interfaces — no
+// mocking library needed for six small interfaces. Each test sets only the
+// fields it needs; calling an unset field panics with a nil-func error,
+// which is exactly the signal that a test forgot to stub a call it
+// actually makes.
+
+type fakeTenantRepo struct {
+	createFn     func(ctx context.Context, tenant *models.Tenant) error
+	findByIDFn   func(ctx context.Context, id uuid.UUID) (*models.Tenant, error)
+	findBySlugFn func(ctx context.Context, slug string) (*models.Tenant, error)
+	updateFn     func(ctx context.Context, tenant *models.Tenant) error
+	listFn       func(ctx context.Context) ([]models.Tenant, error)
+}
+
+func (f *fakeTenantRepo) Create(ctx context.Context, tenant *models.Tenant) error {
+	return f.createFn(ctx, tenant)
+}
+func (f *fakeTenantRepo) FindByID(ctx context.Context, id uuid.UUID) (*models.Tenant, error) {
+	return f.findByIDFn(ctx, id)
+}
+func (f *fakeTenantRepo) FindBySlug(ctx context.Context, slug string) (*models.Tenant, error) {
+	return f.findBySlugFn(ctx, slug)
+}
+func (f *fakeTenantRepo) Update(ctx context.Context, tenant *models.Tenant) error {
+	return f.updateFn(ctx, tenant)
+}
+func (f *fakeTenantRepo) List(ctx context.Context) ([]models.Tenant, error) {
+	return f.listFn(ctx)
+}
+
+type fakeUserRepo struct {
+	createFn      func(ctx context.Context, tenantID uuid.UUID, u *models.User) error
+	findByIDFn    func(ctx context.Context, tenantID, id uuid.UUID) (*models.User, error)
+	findByEmailFn func(ctx context.Context, tenantID uuid.UUID, email string) (*models.User, error)
+	updateFn      func(ctx context.Context, tenantID uuid.UUID, u *models.User) error
+	deleteFn      func(ctx context.Context, tenantID, id uuid.UUID) error
+	listFn        func(ctx context.Context, tenantID uuid.UUID, role *models.UserRole) ([]models.User, error)
+}
+
+func (f *fakeUserRepo) Create(ctx context.Context, tenantID uuid.UUID, u *models.User) error {
+	return f.createFn(ctx, tenantID, u)
+}
+func (f *fakeUserRepo) FindByID(ctx context.Context, tenantID, id uuid.UUID) (*models.User, error) {
+	return f.findByIDFn(ctx, tenantID, id)
+}
+func (f *fakeUserRepo) FindByEmail(ctx context.Context, tenantID uuid.UUID, email string) (*models.User, error) {
+	return f.findByEmailFn(ctx, tenantID, email)
+}
+func (f *fakeUserRepo) Update(ctx context.Context, tenantID uuid.UUID, u *models.User) error {
+	return f.updateFn(ctx, tenantID, u)
+}
+func (f *fakeUserRepo) Delete(ctx context.Context, tenantID, id uuid.UUID) error {
+	return f.deleteFn(ctx, tenantID, id)
+}
+func (f *fakeUserRepo) List(ctx context.Context, tenantID uuid.UUID, role *models.UserRole) ([]models.User, error) {
+	return f.listFn(ctx, tenantID, role)
+}
+
+type fakePatientRepo struct {
+	createFn func(ctx context.Context, tenantID uuid.UUID, p *models.Patient) error
+	findFn   func(ctx context.Context, tenantID, id uuid.UUID) (*models.Patient, error)
+	updateFn func(ctx context.Context, tenantID uuid.UUID, p *models.Patient) error
+	deleteFn func(ctx context.Context, tenantID, id uuid.UUID) error
+	searchFn func(ctx context.Context, tenantID uuid.UUID, query string, limit, offset int) ([]models.Patient, error)
+}
+
+func (f *fakePatientRepo) Create(ctx context.Context, tenantID uuid.UUID, p *models.Patient) error {
+	return f.createFn(ctx, tenantID, p)
+}
+func (f *fakePatientRepo) FindByID(ctx context.Context, tenantID, id uuid.UUID) (*models.Patient, error) {
+	return f.findFn(ctx, tenantID, id)
+}
+func (f *fakePatientRepo) Update(ctx context.Context, tenantID uuid.UUID, p *models.Patient) error {
+	return f.updateFn(ctx, tenantID, p)
+}
+func (f *fakePatientRepo) Delete(ctx context.Context, tenantID, id uuid.UUID) error {
+	return f.deleteFn(ctx, tenantID, id)
+}
+func (f *fakePatientRepo) Search(ctx context.Context, tenantID uuid.UUID, query string, limit, offset int) ([]models.Patient, error) {
+	return f.searchFn(ctx, tenantID, query, limit, offset)
+}
+
+type fakeAppointmentRepo struct {
+	createFn             func(ctx context.Context, tenantID uuid.UUID, a *models.Appointment) error
+	findFn               func(ctx context.Context, tenantID, id uuid.UUID) (*models.Appointment, error)
+	listByProfessionalFn func(ctx context.Context, tenantID, professionalID uuid.UUID, from, to time.Time) ([]models.Appointment, error)
+	listByPatientFn      func(ctx context.Context, tenantID, patientID uuid.UUID) ([]models.Appointment, error)
+	transitionFn         func(ctx context.Context, tenantID, id uuid.UUID, to models.AppointmentStatus, changedByID uuid.UUID, reason string) (*models.Appointment, error)
+}
+
+func (f *fakeAppointmentRepo) Create(ctx context.Context, tenantID uuid.UUID, a *models.Appointment) error {
+	return f.createFn(ctx, tenantID, a)
+}
+func (f *fakeAppointmentRepo) FindByID(ctx context.Context, tenantID, id uuid.UUID) (*models.Appointment, error) {
+	return f.findFn(ctx, tenantID, id)
+}
+func (f *fakeAppointmentRepo) ListByProfessional(ctx context.Context, tenantID, professionalID uuid.UUID, from, to time.Time) ([]models.Appointment, error) {
+	return f.listByProfessionalFn(ctx, tenantID, professionalID, from, to)
+}
+func (f *fakeAppointmentRepo) ListByPatient(ctx context.Context, tenantID, patientID uuid.UUID) ([]models.Appointment, error) {
+	return f.listByPatientFn(ctx, tenantID, patientID)
+}
+func (f *fakeAppointmentRepo) TransitionStatus(ctx context.Context, tenantID, id uuid.UUID, to models.AppointmentStatus, changedByID uuid.UUID, reason string) (*models.Appointment, error) {
+	return f.transitionFn(ctx, tenantID, id, to, changedByID, reason)
+}
+
+type fakeFinancialRuleRepo struct {
+	createFn         func(ctx context.Context, tenantID uuid.UUID, r *models.FinancialRule) error
+	findFn           func(ctx context.Context, tenantID, id uuid.UUID) (*models.FinancialRule, error)
+	updateFn         func(ctx context.Context, tenantID uuid.UUID, r *models.FinancialRule) error
+	listByProfFn     func(ctx context.Context, tenantID, professionalID uuid.UUID) ([]models.FinancialRule, error)
+	findApplicableFn func(ctx context.Context, tenantID, professionalID uuid.UUID, procedureCode, insurancePlan *string) (*models.FinancialRule, error)
+}
+
+func (f *fakeFinancialRuleRepo) Create(ctx context.Context, tenantID uuid.UUID, r *models.FinancialRule) error {
+	return f.createFn(ctx, tenantID, r)
+}
+func (f *fakeFinancialRuleRepo) FindByID(ctx context.Context, tenantID, id uuid.UUID) (*models.FinancialRule, error) {
+	return f.findFn(ctx, tenantID, id)
+}
+func (f *fakeFinancialRuleRepo) Update(ctx context.Context, tenantID uuid.UUID, r *models.FinancialRule) error {
+	return f.updateFn(ctx, tenantID, r)
+}
+func (f *fakeFinancialRuleRepo) ListByProfessional(ctx context.Context, tenantID, professionalID uuid.UUID) ([]models.FinancialRule, error) {
+	return f.listByProfFn(ctx, tenantID, professionalID)
+}
+func (f *fakeFinancialRuleRepo) FindApplicable(ctx context.Context, tenantID, professionalID uuid.UUID, procedureCode, insurancePlan *string) (*models.FinancialRule, error) {
+	return f.findApplicableFn(ctx, tenantID, professionalID, procedureCode, insurancePlan)
+}
+
+type fakeFinancialTransactionRepo struct {
+	createFn             func(ctx context.Context, tenantID uuid.UUID, tx *models.FinancialTransaction) error
+	findFn               func(ctx context.Context, tenantID, id uuid.UUID) (*models.FinancialTransaction, error)
+	markPaidFn           func(ctx context.Context, tenantID, id uuid.UUID, paidAt time.Time) error
+	listByAppointmentFn  func(ctx context.Context, tenantID, appointmentID uuid.UUID) ([]models.FinancialTransaction, error)
+	findPayoutBySourceFn func(ctx context.Context, tenantID, sourceTransactionID uuid.UUID) (*models.FinancialTransaction, error)
+}
+
+func (f *fakeFinancialTransactionRepo) Create(ctx context.Context, tenantID uuid.UUID, tx *models.FinancialTransaction) error {
+	return f.createFn(ctx, tenantID, tx)
+}
+func (f *fakeFinancialTransactionRepo) FindByID(ctx context.Context, tenantID, id uuid.UUID) (*models.FinancialTransaction, error) {
+	return f.findFn(ctx, tenantID, id)
+}
+func (f *fakeFinancialTransactionRepo) MarkPaid(ctx context.Context, tenantID, id uuid.UUID, paidAt time.Time) error {
+	return f.markPaidFn(ctx, tenantID, id, paidAt)
+}
+func (f *fakeFinancialTransactionRepo) ListByAppointment(ctx context.Context, tenantID, appointmentID uuid.UUID) ([]models.FinancialTransaction, error) {
+	return f.listByAppointmentFn(ctx, tenantID, appointmentID)
+}
+func (f *fakeFinancialTransactionRepo) FindPayoutBySource(ctx context.Context, tenantID, sourceTransactionID uuid.UUID) (*models.FinancialTransaction, error) {
+	return f.findPayoutBySourceFn(ctx, tenantID, sourceTransactionID)
+}

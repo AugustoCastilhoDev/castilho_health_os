@@ -44,6 +44,6 @@ func RequireAuth(issuer *auth.JWTIssuer) fiber.Handler {
 // UserID, TenantID and Role read the claims RequireAuth stashed earlier in
 // the chain. They panic if called on a route that skipped RequireAuth —
 // that's a routing bug, not a runtime condition to handle gracefully.
-func UserID(c *fiber.Ctx) uuid.UUID { return c.Locals(localsUserID).(uuid.UUID) }
-func TenantID(c *fiber.Ctx) uuid.UUID { return c.Locals(localsTenantID).(uuid.UUID) }
+func UserID(c *fiber.Ctx) uuid.UUID     { return c.Locals(localsUserID).(uuid.UUID) }
+func TenantID(c *fiber.Ctx) uuid.UUID   { return c.Locals(localsTenantID).(uuid.UUID) }
 func Role(c *fiber.Ctx) models.UserRole { return c.Locals(localsRole).(models.UserRole) }
