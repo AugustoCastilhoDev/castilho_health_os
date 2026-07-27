@@ -1,6 +1,9 @@
 package handlers
 
 import (
+	"errors"
+	"log"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 
@@ -10,11 +13,12 @@ import (
 )
 
 type FinancialHandler struct {
-	financial *service.FinancialService
+	financial  *service.FinancialService
+	settlement *service.SettlementService
 }
 
-func NewFinancialHandler(s *service.FinancialService) *FinancialHandler {
-	return &FinancialHandler{financial: s}
+func NewFinancialHandler(s *service.FinancialService, settlement *service.SettlementService) *FinancialHandler {
+	return &FinancialHandler{financial: s, settlement: settlement}
 }
 
 type financialRuleRequest struct {
@@ -85,6 +89,8 @@ type financialTransactionRequest struct {
 	GrossAmountCents int64      `json:"gross_amount_cents"`
 	FeeAmountCents   int64      `json:"fee_amount_cents"`
 	PaymentMethod    *string    `json:"payment_method"`
+	ProcedureCode    *string    `json:"procedure_code"`
+	InsurancePlan    *string    `json:"insurance_plan"`
 	Notes            string     `json:"notes"`
 }
 
@@ -108,6 +114,8 @@ func (h *FinancialHandler) CreateTransaction(c *fiber.Ctx) error {
 		GrossAmountCents: req.GrossAmountCents,
 		FeeAmountCents:   req.FeeAmountCents,
 		PaymentMethod:    pm,
+		ProcedureCode:    req.ProcedureCode,
+		InsurancePlan:    req.InsurancePlan,
 		Notes:            req.Notes,
 	}
 
@@ -134,9 +142,23 @@ func (h *FinancialHandler) MarkPaid(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid id"})
 	}
-	if err := h.financial.MarkPaid(c.Context(), appmiddleware.TenantID(c), id); err != nil {
+	tenantID := appmiddleware.TenantID(c)
+	if err := h.financial.MarkPaid(c.Context(), tenantID, id); err != nil {
 		return respondErr(c, err)
 	}
+
+	// Best-effort: marking a PATIENT_PAYMENT paid is the other half of the
+	// settlement gate (see SettlementService) — the appointment may already
+	// be COMPLETED, in which case this is the event that should trigger the
+	// payout. Never fail this response over it; retry via the appointment's
+	// manual /settle endpoint if something's missing.
+	if tx, getErr := h.financial.GetTransaction(c.Context(), tenantID, id); getErr == nil &&
+		tx.Type == models.TransactionPatientPayment && tx.AppointmentID != nil {
+		if _, err := h.settlement.Settle(c.Context(), tenantID, *tx.AppointmentID); err != nil && !errors.Is(err, service.ErrSettlementNotReady) {
+			log.Printf("settlement: auto-settle after mark-paid failed for appointment %s: %v", *tx.AppointmentID, err)
+		}
+	}
+
 	return c.SendStatus(fiber.StatusNoContent)
 }
 

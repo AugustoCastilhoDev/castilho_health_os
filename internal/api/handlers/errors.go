@@ -18,6 +18,8 @@ func respondErr(c *fiber.Ctx, err error) error {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "not found"})
 	case errors.Is(err, repository.ErrInvalidTransition):
 		return c.Status(fiber.StatusConflict).JSON(fiber.Map{"error": err.Error()})
+	case errors.Is(err, service.ErrSettlementNotReady):
+		return c.Status(fiber.StatusConflict).JSON(fiber.Map{"error": err.Error()})
 	case errors.Is(err, service.ErrConflict):
 		return c.Status(fiber.StatusConflict).JSON(fiber.Map{"error": err.Error()})
 	case errors.Is(err, service.ErrValidation):

@@ -74,6 +74,10 @@ func RegisterRoutes(app *fiber.App, h *Handlers, issuer *auth.JWTIssuer, healthC
 	appointments.Get("/", h.Appointment.ListByProfessional)
 	appointments.Get("/:id", h.Appointment.Get)
 	appointments.Post("/:id/transition", h.Appointment.Transition)
+	// Manual retry for automatic settlement (see SettlementService) — for
+	// when the auto-trigger on COMPLETED/mark-paid couldn't run yet, e.g. no
+	// financial rule was configured for the professional at that time.
+	appointments.Post("/:id/settle", finance, h.Appointment.Settle)
 
 	rules := protected.Group("/financial-rules")
 	rules.Post("/", finance, h.Financial.CreateRule)

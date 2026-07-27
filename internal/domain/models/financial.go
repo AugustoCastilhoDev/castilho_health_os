@@ -120,6 +120,13 @@ type FinancialTransaction struct {
 	// for the zero value, which the payment_method CHECK constraint rejects.
 	PaymentMethod *PaymentMethod `gorm:"type:varchar(20)" json:"payment_method,omitempty"`
 
+	// ProcedureCode/InsurancePlan let a PATIENT_PAYMENT carry the same scope
+	// dimensions FinancialRule matches on, so the settlement service can call
+	// FindApplicable with real data instead of always falling back to a
+	// professional's wildcard rule.
+	ProcedureCode *string `gorm:"type:varchar(50);index" json:"procedure_code,omitempty"`
+	InsurancePlan *string `gorm:"type:varchar(100);index" json:"insurance_plan,omitempty"`
+
 	DueDate *time.Time `json:"due_date,omitempty"`
 	PaidAt  *time.Time `json:"paid_at,omitempty"`
 

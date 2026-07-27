@@ -35,13 +35,15 @@ func main() {
 	ruleRepo := repository.NewFinancialRuleRepository(gdb)
 	txRepo := repository.NewFinancialTransactionRepository(gdb)
 
+	settlementService := service.NewSettlementService(appointmentRepo, ruleRepo, txRepo)
+
 	h := &api.Handlers{
 		Auth:        handlers.NewAuthHandler(service.NewAuthService(tenantRepo, userRepo, issuer)),
 		Tenant:      handlers.NewTenantHandler(service.NewTenantService(gdb, tenantRepo)),
 		User:        handlers.NewUserHandler(service.NewUserService(userRepo)),
 		Patient:     handlers.NewPatientHandler(service.NewPatientService(patientRepo)),
-		Appointment: handlers.NewAppointmentHandler(service.NewAppointmentService(appointmentRepo)),
-		Financial:   handlers.NewFinancialHandler(service.NewFinancialService(ruleRepo, txRepo)),
+		Appointment: handlers.NewAppointmentHandler(service.NewAppointmentService(appointmentRepo), settlementService),
+		Financial:   handlers.NewFinancialHandler(service.NewFinancialService(ruleRepo, txRepo), settlementService),
 	}
 
 	app := fiber.New()
