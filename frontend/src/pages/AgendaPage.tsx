@@ -1,30 +1,12 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ChevronLeft, ChevronRight, Plus } from 'lucide-react'
 import { WeeklyAgendaGrid, type AgendaAppointment } from '../components/agenda/WeeklyAgendaGrid'
 import { addDays, formatWeekRange, startOfWeek } from '../lib/format'
 import { APPOINTMENT_STATUS_LABEL, APPOINTMENT_STATUS_STYLE, type AppointmentStatus } from '../lib/appointmentStatus'
-
-// Placeholder until wired to GET /api/appointments?professional_id=&from=&to=
-// — deterministic per week so navigating weeks still looks plausible.
-function generateMockWeek(weekStart: Date): AgendaAppointment[] {
-  const at = (dayOffset: number, hour: number, minute: number) => {
-    const d = addDays(weekStart, dayOffset)
-    d.setHours(hour, minute, 0, 0)
-    return d
-  }
-
-  return [
-    { id: '1', patientName: 'Mariana Costa', scheduledAt: at(0, 9, 0), durationMin: 30, status: 'CONFIRMED' },
-    { id: '2', patientName: 'João Pereira', scheduledAt: at(0, 10, 30), durationMin: 60, status: 'COMPLETED' },
-    { id: '3', patientName: 'Beatriz Lima', scheduledAt: at(1, 8, 30), durationMin: 30, status: 'SCHEDULED' },
-    { id: '4', patientName: 'Carlos Nunes', scheduledAt: at(1, 14, 0), durationMin: 30, status: 'CANCELLED' },
-    { id: '5', patientName: 'Fernanda Alves', scheduledAt: at(2, 9, 30), durationMin: 30, status: 'IN_PROGRESS' },
-    { id: '6', patientName: 'Rafael Souza', scheduledAt: at(2, 11, 0), durationMin: 30, status: 'WAITING' },
-    { id: '7', patientName: 'Patrícia Gomes', scheduledAt: at(3, 15, 0), durationMin: 45, status: 'COMPLETED' },
-    { id: '8', patientName: 'Lucas Martins', scheduledAt: at(4, 10, 0), durationMin: 30, status: 'NO_SHOW' },
-    { id: '9', patientName: 'Camila Rocha', scheduledAt: at(4, 16, 30), durationMin: 30, status: 'CONFIRMED' },
-  ]
-}
+import { useAuth } from '../lib/auth/AuthContext'
+import { useProfessionalScope } from '../hooks/useProfessionalScope'
+import { ApiError } from '../lib/api/client'
+import type { AppointmentDTO, PatientDTO } from '../lib/api/types'
 
 const LEGEND_STATUSES: AppointmentStatus[] = [
   'SCHEDULED',
@@ -36,12 +18,60 @@ const LEGEND_STATUSES: AppointmentStatus[] = [
 ]
 
 export function AgendaPage() {
+  const { apiFetch } = useAuth()
+  const { professionals, professionalId, setProfessionalId } = useProfessionalScope()
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date()))
-  const appointments = useMemo(() => generateMockWeek(weekStart), [weekStart])
+  const [appointments, setAppointments] = useState<AgendaAppointment[]>([])
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!professionalId) return
+    let cancelled = false
+
+    async function load() {
+      setError(null)
+      try {
+        const from = weekStart.toISOString()
+        const to = addDays(weekStart, 7).toISOString()
+        const data = await apiFetch<AppointmentDTO[]>(
+          `/api/appointments?professional_id=${professionalId}&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
+        )
+
+        // Appointment doesn't embed the patient (only patient_id) — resolve
+        // display names with one lookup per unique patient in the week.
+        const uniquePatientIds = [...new Set(data.map((a) => a.patient_id))]
+        const patients = await Promise.all(
+          uniquePatientIds.map((id) => apiFetch<PatientDTO>(`/api/patients/${id}`)),
+        )
+        const nameByPatientId = new Map(patients.map((p) => [p.id, p.name]))
+
+        if (!cancelled) {
+          setAppointments(
+            data.map((a) => ({
+              id: a.id,
+              patientName: nameByPatientId.get(a.patient_id) ?? 'Paciente',
+              scheduledAt: new Date(a.scheduled_at),
+              durationMin: a.duration_min,
+              status: a.status as AppointmentStatus,
+            })),
+          )
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof ApiError ? err.message : 'Não foi possível carregar a agenda.')
+        }
+      }
+    }
+
+    load()
+    return () => {
+      cancelled = true
+    }
+  }, [professionalId, weekStart, apiFetch])
 
   return (
     <>
-      <header className="flex items-center justify-between border-b border-slate-200 bg-brand-surface px-8 py-5">
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-brand-surface px-8 py-5">
         <div>
           <p className="text-sm text-brand-text-muted">Agenda</p>
           <h1 className="text-xl font-semibold text-brand-text">
@@ -49,7 +79,21 @@ export function AgendaPage() {
           </h1>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          {professionals.length > 1 && (
+            <select
+              value={professionalId ?? ''}
+              onChange={(e) => setProfessionalId(e.target.value)}
+              className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-brand-text focus:border-brand-action focus:outline-none focus:ring-1 focus:ring-brand-action"
+            >
+              {professionals.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          )}
+
           <div className="flex items-center rounded-lg ring-1 ring-slate-200">
             <button
               type="button"
@@ -87,6 +131,12 @@ export function AgendaPage() {
       </header>
 
       <main className="p-6">
+        {error && (
+          <p className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-brand-alert-text">
+            {error}
+          </p>
+        )}
+
         <WeeklyAgendaGrid weekStart={weekStart} appointments={appointments} />
 
         <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2">

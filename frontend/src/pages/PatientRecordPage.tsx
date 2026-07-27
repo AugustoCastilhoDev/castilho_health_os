@@ -1,98 +1,127 @@
+import { useEffect, useState } from 'react'
+import { useParams } from 'react-router-dom'
 import { Cake, IdCard, Mail, Phone, Plus } from 'lucide-react'
 import { PatientTimeline, type TimelineEntry } from '../components/prontuario/PatientTimeline'
 import { calculateAge, initials } from '../lib/format'
-
-// Placeholder until wired to GET /api/patients/:id and the appointment/
-// encounter history endpoints — field names mirror models.Patient.
-const mockPatient = {
-  name: 'Beatriz Lima',
-  document: '123.456.789-00',
-  birthDate: new Date(1990, 4, 12),
-  phone: '(11) 98877-6655',
-  email: 'beatriz.lima@example.com',
-  insurancePlan: 'Particular',
-}
-
-const mockTimeline: TimelineEntry[] = [
-  {
-    id: '1',
-    date: new Date(2026, 6, 22),
-    type: 'RETORNO',
-    title: 'Retorno pós-procedimento',
-    professionalName: 'Dra. Ana Souza',
-    status: 'COMPLETED',
-    notes:
-      'Paciente relata melhora significativa dos sintomas. Sem intercorrências. Mantida a conduta anterior.',
-  },
-  {
-    id: '2',
-    date: new Date(2026, 6, 8),
-    type: 'EXAME',
-    title: 'Exames laboratoriais de rotina',
-    professionalName: 'Dra. Ana Souza',
-    status: 'COMPLETED',
-    notes: 'Hemograma e glicemia dentro dos parâmetros normais. Solicitado repetir em 6 meses.',
-  },
-  {
-    id: '3',
-    date: new Date(2026, 5, 15),
-    type: 'CONSULTA',
-    title: 'Consulta de rotina',
-    professionalName: 'Dra. Ana Souza',
-    status: 'COMPLETED',
-    notes:
-      'Queixa principal: dor lombar leve. Prescrito anti-inflamatório por 5 dias e orientações posturais.',
-  },
-  {
-    id: '4',
-    date: new Date(2026, 4, 30),
-    type: 'PROCEDIMENTO',
-    title: 'Consulta agendada',
-    professionalName: 'Dra. Ana Souza',
-    status: 'NO_SHOW',
-    notes: 'Paciente não compareceu e não justificou a ausência.',
-  },
-]
+import { useAuth } from '../lib/auth/AuthContext'
+import { ApiError } from '../lib/api/client'
+import type { AppointmentDTO, PatientDTO, UserDTO } from '../lib/api/types'
+import type { AppointmentStatus } from '../lib/appointmentStatus'
 
 export function PatientRecordPage() {
-  const age = calculateAge(mockPatient.birthDate)
+  const { patientId } = useParams<{ patientId: string }>()
+  const { apiFetch } = useAuth()
+  const [patient, setPatient] = useState<PatientDTO | null>(null)
+  const [timeline, setTimeline] = useState<TimelineEntry[]>([])
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!patientId) return
+    let cancelled = false
+
+    async function load() {
+      setError(null)
+      try {
+        const [patientData, appointments] = await Promise.all([
+          apiFetch<PatientDTO>(`/api/patients/${patientId}`),
+          apiFetch<AppointmentDTO[]>(`/api/patients/${patientId}/appointments`),
+        ])
+
+        // Appointment doesn't embed the professional (only professional_id)
+        // — resolve display names with one lookup per unique professional.
+        const uniqueProfessionalIds = [...new Set(appointments.map((a) => a.professional_id))]
+        const professionals = await Promise.all(
+          uniqueProfessionalIds.map((id) => apiFetch<UserDTO>(`/api/users/${id}`)),
+        )
+        const nameByProfessionalId = new Map(professionals.map((p) => [p.id, p.name]))
+
+        if (cancelled) return
+        setPatient(patientData)
+        setTimeline(
+          appointments
+            .slice()
+            .sort((a, b) => new Date(b.scheduled_at).getTime() - new Date(a.scheduled_at).getTime())
+            .map((a) => ({
+              id: a.id,
+              date: new Date(a.scheduled_at),
+              professionalName: nameByProfessionalId.get(a.professional_id) ?? 'Profissional',
+              status: a.status as AppointmentStatus,
+              notes: a.cancellation_reason,
+            })),
+        )
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof ApiError ? err.message : 'Não foi possível carregar o prontuário.')
+        }
+      }
+    }
+
+    load()
+    return () => {
+      cancelled = true
+    }
+  }, [patientId, apiFetch])
+
+  if (error) {
+    return (
+      <main className="p-6">
+        <p className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-brand-alert-text">
+          {error}
+        </p>
+      </main>
+    )
+  }
+
+  if (!patient) {
+    return <main className="p-6 text-sm text-brand-text-muted">Carregando…</main>
+  }
+
+  const age = patient.birth_date ? calculateAge(new Date(patient.birth_date)) : null
 
   return (
     <>
       <header className="border-b border-slate-200 bg-brand-surface px-8 py-5">
         <p className="text-sm text-brand-text-muted">Prontuário Eletrônico</p>
-        <h1 className="text-xl font-semibold text-brand-text">{mockPatient.name}</h1>
+        <h1 className="text-xl font-semibold text-brand-text">{patient.name}</h1>
       </header>
 
       <main className="space-y-6 p-6">
         <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl bg-brand-surface p-6 shadow-sm ring-1 ring-slate-200">
           <div className="flex items-center gap-4">
             <div className="flex h-14 w-14 items-center justify-center rounded-full bg-slate-200 text-lg font-semibold text-brand-text">
-              {initials(mockPatient.name)}
+              {initials(patient.name)}
             </div>
             <div>
-              <p className="text-base font-semibold text-brand-text">{mockPatient.name}</p>
-              <p className="text-sm text-brand-text-muted">{mockPatient.insurancePlan}</p>
+              <p className="text-base font-semibold text-brand-text">{patient.name}</p>
+              {age !== null && <p className="text-sm text-brand-text-muted">{age} anos</p>}
             </div>
           </div>
 
           <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-brand-text-muted">
-            <span className="flex items-center gap-1.5">
-              <Cake size={16} />
-              {age} anos
-            </span>
-            <span className="flex items-center gap-1.5">
-              <IdCard size={16} />
-              {mockPatient.document}
-            </span>
-            <span className="flex items-center gap-1.5">
-              <Phone size={16} />
-              {mockPatient.phone}
-            </span>
-            <span className="flex items-center gap-1.5">
-              <Mail size={16} />
-              {mockPatient.email}
-            </span>
+            {age !== null && (
+              <span className="flex items-center gap-1.5">
+                <Cake size={16} />
+                {age} anos
+              </span>
+            )}
+            {patient.document && (
+              <span className="flex items-center gap-1.5">
+                <IdCard size={16} />
+                {patient.document}
+              </span>
+            )}
+            {patient.phone && (
+              <span className="flex items-center gap-1.5">
+                <Phone size={16} />
+                {patient.phone}
+              </span>
+            )}
+            {patient.email && (
+              <span className="flex items-center gap-1.5">
+                <Mail size={16} />
+                {patient.email}
+              </span>
+            )}
           </div>
 
           <button
@@ -108,7 +137,7 @@ export function PatientRecordPage() {
           <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-brand-text-muted">
             Histórico
           </h2>
-          <PatientTimeline entries={mockTimeline} />
+          <PatientTimeline entries={timeline} />
         </div>
       </main>
     </>

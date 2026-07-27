@@ -30,6 +30,8 @@ func RegisterRoutes(app *fiber.App, h *Handlers, issuer *auth.JWTIssuer, healthC
 
 	protected := app.Group("/api", middleware.RequireAuth(issuer))
 
+	protected.Get("/tenant", h.Tenant.GetCurrent)
+
 	protected.Get("/me", func(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{
 			"user_id":   middleware.UserID(c),

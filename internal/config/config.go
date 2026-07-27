@@ -21,6 +21,8 @@ type Config struct {
 
 	JWTSecret string
 	JWTTTL    time.Duration
+
+	CORSAllowedOrigins string
 }
 
 // Load reads a .env file if one is present (local dev running outside
@@ -45,6 +47,8 @@ func Load() (*Config, error) {
 		DBSSLMode:  getEnv("DB_SSLMODE", "disable"),
 		JWTSecret:  os.Getenv("JWT_SECRET"),
 		JWTTTL:     jwtTTL,
+
+		CORSAllowedOrigins: getEnv("CORS_ALLOWED_ORIGINS", "http://localhost:5173"),
 	}
 
 	if cfg.DBUser == "" || cfg.DBPassword == "" || cfg.DBName == "" {

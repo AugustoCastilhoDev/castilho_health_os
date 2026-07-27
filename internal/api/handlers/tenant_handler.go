@@ -3,6 +3,7 @@ package handlers
 import (
 	"github.com/gofiber/fiber/v2"
 
+	appmiddleware "github.com/castilho/health-os/internal/api/middleware"
 	"github.com/castilho/health-os/internal/domain/models"
 	"github.com/castilho/health-os/internal/service"
 )
@@ -57,4 +58,14 @@ func (h *TenantHandler) Register(c *fiber.Ctx) error {
 		"tenant": fiber.Map{"id": tenant.ID, "slug": tenant.Slug, "name": tenant.Name},
 		"admin":  fiber.Map{"id": admin.ID, "email": admin.Email},
 	})
+}
+
+// GetCurrent returns the tenant for the session's own tenant_id (from JWT
+// claims) — "which clinic am I logged into", for the app shell to display.
+func (h *TenantHandler) GetCurrent(c *fiber.Ctx) error {
+	tenant, err := h.tenants.Get(c.Context(), appmiddleware.TenantID(c))
+	if err != nil {
+		return respondErr(c, err)
+	}
+	return c.JSON(tenant)
 }

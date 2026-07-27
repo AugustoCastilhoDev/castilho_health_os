@@ -1,8 +1,9 @@
 import { Link, NavLink } from 'react-router-dom'
-import { Activity, Calendar, Users, Wallet, Package } from 'lucide-react'
+import { Activity, Calendar, LogOut, Users, Wallet, Package } from 'lucide-react'
 
 interface SidebarProps {
   clinicName: string
+  onLogout: () => void
 }
 
 function navLinkClass(isActive: boolean): string {
@@ -18,7 +19,7 @@ const comingSoon = [
   { label: 'Estoque', icon: Package },
 ]
 
-export function Sidebar({ clinicName }: SidebarProps) {
+export function Sidebar({ clinicName, onLogout }: SidebarProps) {
   return (
     <aside className="flex h-screen w-64 shrink-0 flex-col bg-brand-sidebar text-slate-100">
       <Link to="/" className="flex items-center gap-2 px-6 py-6">
@@ -41,7 +42,7 @@ export function Sidebar({ clinicName }: SidebarProps) {
           <Calendar size={18} />
           Agenda
         </NavLink>
-        <NavLink to="/pacientes/demo-patient" className={({ isActive }) => navLinkClass(isActive)}>
+        <NavLink to="/pacientes" className={({ isActive }) => navLinkClass(isActive)}>
           <Users size={18} />
           Pacientes
         </NavLink>
@@ -58,6 +59,15 @@ export function Sidebar({ clinicName }: SidebarProps) {
           </div>
         ))}
       </nav>
+
+      <button
+        type="button"
+        onClick={onLogout}
+        className="mx-4 mb-6 flex items-center gap-3 rounded-lg px-4 py-2.5 text-sm font-medium text-slate-300 transition-colors hover:bg-white/5 hover:text-white"
+      >
+        <LogOut size={18} />
+        Sair
+      </button>
     </aside>
   )
 }

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 
 	"github.com/castilho/health-os/internal/auth"
@@ -88,4 +89,11 @@ func (s *TenantService) Register(ctx context.Context, in RegisterTenantInput) (*
 	}
 
 	return tenant, admin, nil
+}
+
+// Get returns the tenant record for a session's own tenant_id (from JWT
+// claims) — used by the "which clinic am I logged into" endpoint, never for
+// looking up an arbitrary tenant.
+func (s *TenantService) Get(ctx context.Context, id uuid.UUID) (*models.Tenant, error) {
+	return s.tenants.FindByID(ctx, id)
 }

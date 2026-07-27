@@ -1,24 +1,17 @@
 import { StatusBadge } from '../common/StatusBadge'
-import { formatDateLong } from '../../lib/format'
+import { formatDateLong, formatTime } from '../../lib/format'
 import { APPOINTMENT_STATUS_DOT, type AppointmentStatus } from '../../lib/appointmentStatus'
 
-export type EncounterType = 'CONSULTA' | 'RETORNO' | 'PROCEDIMENTO' | 'EXAME'
-
-const ENCOUNTER_TYPE_LABEL: Record<EncounterType, string> = {
-  CONSULTA: 'Consulta',
-  RETORNO: 'Retorno',
-  PROCEDIMENTO: 'Procedimento',
-  EXAME: 'Exame',
-}
-
+// One entry per Appointment. The backend doesn't model clinical notes yet
+// (see models.Patient's doc comment — PEP/prontuário content is a separate,
+// not-yet-built module), so `notes` here is only ever the
+// CancellationReason when present; there is no free-text encounter note.
 export interface TimelineEntry {
   id: string
   date: Date
-  type: EncounterType
-  title: string
   professionalName: string
   status: AppointmentStatus
-  notes: string
+  notes?: string
 }
 
 interface PatientTimelineProps {
@@ -44,15 +37,16 @@ export function PatientTimeline({ entries }: PatientTimelineProps) {
           <div className="rounded-xl bg-brand-surface p-5 shadow-sm ring-1 ring-slate-200">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="text-xs font-medium uppercase tracking-wide text-brand-text-muted">
-                {formatDateLong(entry.date)}
+                {formatDateLong(entry.date)} · {formatTime(entry.date)}
               </span>
               <StatusBadge status={entry.status} />
             </div>
-            <h3 className="mt-1 text-base font-semibold text-brand-text">{entry.title}</h3>
-            <p className="text-sm text-brand-text-muted">
-              {entry.professionalName} · {ENCOUNTER_TYPE_LABEL[entry.type]}
+            <h3 className="mt-1 text-base font-semibold text-brand-text">
+              Consulta com {entry.professionalName}
+            </h3>
+            <p className="mt-3 text-sm text-brand-text">
+              {entry.notes || 'Nenhuma observação registrada para este atendimento.'}
             </p>
-            <p className="mt-3 text-sm text-brand-text">{entry.notes}</p>
           </div>
         </li>
       ))}

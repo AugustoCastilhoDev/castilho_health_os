@@ -1,0 +1,78 @@
+// Mirrors the backend's JSON responses (internal/domain/models) — field
+// names and optionality follow the Go struct tags exactly so this stays a
+// direct contract with the API, not a guess.
+
+export interface TenantDTO {
+  id: string
+  name: string
+  slug: string
+  type: string
+  document: string
+  email: string
+  phone: string
+  is_active: boolean
+}
+
+export interface UserDTO {
+  id: string
+  tenant_id: string
+  name: string
+  email: string
+  role: string
+  is_active: boolean
+  council_type?: string
+  council_number?: string
+  council_state?: string
+}
+
+export interface PatientDTO {
+  id: string
+  tenant_id: string
+  name: string
+  document?: string
+  birth_date?: string
+  phone?: string
+  email?: string
+  address_zip?: string
+  address_street?: string
+  address_city?: string
+  address_state?: string
+}
+
+export interface AppointmentDTO {
+  id: string
+  tenant_id: string
+  patient_id: string
+  professional_id: string
+  scheduled_at: string
+  duration_min: number
+  status: string
+  confirmed_at?: string
+  checked_in_at?: string
+  started_at?: string
+  completed_at?: string
+  cancelled_at?: string
+  no_show_at?: string
+  cancellation_reason?: string
+}
+
+export interface FinancialTransactionDTO {
+  id: string
+  tenant_id: string
+  appointment_id?: string
+  patient_id?: string
+  professional_id?: string
+  source_transaction_id?: string
+  financial_rule_id?: string
+  type: string
+  status: string
+  gross_amount_cents: number
+  fee_amount_cents: number
+  net_amount_cents: number
+  payment_method?: string
+  procedure_code?: string
+  insurance_plan?: string
+  due_date?: string
+  paid_at?: string
+  notes?: string
+}
