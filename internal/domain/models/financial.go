@@ -114,7 +114,11 @@ type FinancialTransaction struct {
 	FeeAmountCents   int64 `gorm:"not null;default:0" json:"fee_amount_cents"` // e.g. card acquirer fee
 	NetAmountCents   int64 `gorm:"not null" json:"net_amount_cents"`           // what actually settles
 
-	PaymentMethod PaymentMethod `gorm:"type:varchar(20)" json:"payment_method,omitempty"`
+	// PaymentMethod is a pointer because it's genuinely optional (e.g. a
+	// PROFESSIONAL_PAYOUT row may not have a disbursement method decided
+	// yet) — as a plain string, GORM would insert '' instead of SQL NULL
+	// for the zero value, which the payment_method CHECK constraint rejects.
+	PaymentMethod *PaymentMethod `gorm:"type:varchar(20)" json:"payment_method,omitempty"`
 
 	DueDate *time.Time `json:"due_date,omitempty"`
 	PaidAt  *time.Time `json:"paid_at,omitempty"`

@@ -4,6 +4,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/joho/godotenv"
 )
@@ -17,6 +18,9 @@ type Config struct {
 	DBPassword string
 	DBName     string
 	DBSSLMode  string
+
+	JWTSecret string
+	JWTTTL    time.Duration
 }
 
 // Load reads a .env file if one is present (local dev running outside
@@ -26,6 +30,11 @@ type Config struct {
 func Load() (*Config, error) {
 	_ = godotenv.Load()
 
+	jwtTTL, err := time.ParseDuration(getEnv("JWT_TTL", "24h"))
+	if err != nil {
+		return nil, fmt.Errorf("config: invalid JWT_TTL: %w", err)
+	}
+
 	cfg := &Config{
 		AppPort:    getEnv("APP_PORT", "8080"),
 		DBHost:     getEnv("DB_HOST", "localhost"),
@@ -34,10 +43,15 @@ func Load() (*Config, error) {
 		DBPassword: os.Getenv("POSTGRES_PASSWORD"),
 		DBName:     os.Getenv("POSTGRES_DB"),
 		DBSSLMode:  getEnv("DB_SSLMODE", "disable"),
+		JWTSecret:  os.Getenv("JWT_SECRET"),
+		JWTTTL:     jwtTTL,
 	}
 
 	if cfg.DBUser == "" || cfg.DBPassword == "" || cfg.DBName == "" {
 		return nil, fmt.Errorf("config: POSTGRES_USER, POSTGRES_PASSWORD and POSTGRES_DB must be set")
+	}
+	if len(cfg.JWTSecret) < 32 {
+		return nil, fmt.Errorf("config: JWT_SECRET must be set and at least 32 characters long")
 	}
 
 	return cfg, nil
