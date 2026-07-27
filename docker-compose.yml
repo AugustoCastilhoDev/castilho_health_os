@@ -63,6 +63,39 @@ services:
       migrate:
         condition: service_completed_successfully
 
+  # nginx/certbot only run under the "production" profile (`docker compose
+  # --profile production up`) — plain `docker compose up` for local dev
+  # skips them, so ports 80/443 never fight with anything else on the
+  # host and stay untouched when there's no real domain to serve.
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: chos_nginx
+    restart: unless-stopped
+    profiles: ["production"]
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - certbot_www:/var/www/certbot:ro
+      - certbot_certs:/etc/letsencrypt:ro
+    depends_on:
+      - app
+
+  # See nginx/conf.d/001-ssl.conf.disabled for the one-time issuance
+  # command and the renewal/reload notes.
+  certbot:
+    image: certbot/certbot
+    container_name: chos_certbot
+    profiles: ["production"]
+    volumes:
+      - certbot_www:/var/www/certbot
+      - certbot_certs:/etc/letsencrypt
+    entrypoint: >
+      /bin/sh -c "trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;"
+
 volumes:
   db_data:
   redis_data:
+  certbot_www:
+  certbot_certs:

@@ -1,0 +1,52 @@
+# Post-certificate config. Disabled by the .disabled extension (nginx only
+# loads *.conf from this directory) until a certificate actually exists.
+#
+# Deploy step, once on the VPS with the domain's DNS pointing at it:
+#   1. Bring up db/redis/migrate/app/nginx with castilhohealth.conf active
+#      (the plain HTTP-only config already in this directory).
+#   2. docker compose run --rm certbot certonly --webroot \
+#        -w /var/www/certbot -d castilhohealth.com.br -d www.castilhohealth.com.br \
+#        --email <your-email> --agree-tos --no-eff-email
+#   3. rm nginx/conf.d/castilhohealth.conf
+#      mv nginx/conf.d/001-ssl.conf.disabled nginx/conf.d/001-ssl.conf
+#   4. docker compose restart nginx
+#
+# Renewal: the `certbot` compose service loops `certbot renew` every 12h,
+# writing renewed certs to the shared certbot_certs volume. nginx doesn't
+# pick up a renewed cert until it reloads, so add a host crontab entry to
+# reload it periodically (a reload doesn't drop live connections):
+#   0 3 * * * docker compose -f /path/to/docker-compose.yml exec nginx nginx -s reload
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name castilhohealth.com.br www.castilhohealth.com.br;
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    http2 on;
+    server_name castilhohealth.com.br www.castilhohealth.com.br;
+
+    ssl_certificate     /etc/letsencrypt/live/castilhohealth.com.br/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/castilhohealth.com.br/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers HIGH:!aNULL:!MD5;
+
+    location / {
+        proxy_pass http://app:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
