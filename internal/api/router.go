@@ -15,6 +15,7 @@ import (
 type Handlers struct {
 	Auth        *handlers.AuthHandler
 	Tenant      *handlers.TenantHandler
+	User        *handlers.UserHandler
 	Patient     *handlers.PatientHandler
 	Appointment *handlers.AppointmentHandler
 	Financial   *handlers.FinancialHandler
@@ -42,6 +43,19 @@ func RegisterRoutes(app *fiber.App, h *Handlers, issuer *auth.JWTIssuer, healthC
 	frontDesk := middleware.RequireRole(models.RoleTenantAdmin, models.RoleReceptionist)
 	admin := middleware.RequireRole(models.RoleTenantAdmin)
 	finance := middleware.RequireRole(models.RoleTenantAdmin, models.RoleFinance)
+
+	// Get/List are open to any authenticated role (they back "pick a
+	// professional" pickers); mutating a user's account is admin-only.
+	// Self password change lives under /users/me/password rather than
+	// gating it with `admin` — it's a different concern (auth to your own
+	// account, not staff management).
+	users := protected.Group("/users")
+	users.Post("/", admin, h.User.Create)
+	users.Get("/", h.User.List)
+	users.Get("/:id", h.User.Get)
+	users.Put("/:id", admin, h.User.Update)
+	users.Post("/:id/reset-password", admin, h.User.ResetPassword)
+	users.Put("/me/password", h.User.ChangeOwnPassword)
 
 	patients := protected.Group("/patients")
 	patients.Post("/", frontDesk, h.Patient.Create)

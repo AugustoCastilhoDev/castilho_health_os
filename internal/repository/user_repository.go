@@ -21,7 +21,10 @@ type UserRepository interface {
 	FindByEmail(ctx context.Context, tenantID uuid.UUID, email string) (*models.User, error)
 	Update(ctx context.Context, tenantID uuid.UUID, user *models.User) error
 	Delete(ctx context.Context, tenantID, id uuid.UUID) error
-	ListByRole(ctx context.Context, tenantID uuid.UUID, role models.UserRole) ([]models.User, error)
+	// List returns tenant users, optionally filtered by role (nil = all
+	// roles). Includes inactive users deliberately — an admin managing
+	// staff needs to find and reactivate someone, not just see who's live.
+	List(ctx context.Context, tenantID uuid.UUID, role *models.UserRole) ([]models.User, error)
 }
 
 type userRepository struct {
@@ -100,13 +103,13 @@ func (r *userRepository) Delete(ctx context.Context, tenantID, id uuid.UUID) err
 	return nil
 }
 
-func (r *userRepository) ListByRole(ctx context.Context, tenantID uuid.UUID, role models.UserRole) ([]models.User, error) {
+func (r *userRepository) List(ctx context.Context, tenantID uuid.UUID, role *models.UserRole) ([]models.User, error) {
+	q := r.db.WithContext(ctx).Where("tenant_id = ?", tenantID)
+	if role != nil {
+		q = q.Where("role = ?", *role)
+	}
 	var users []models.User
-	err := r.db.WithContext(ctx).
-		Where("tenant_id = ? AND role = ? AND is_active = true", tenantID, role).
-		Order("name").
-		Find(&users).Error
-	if err != nil {
+	if err := q.Order("name").Find(&users).Error; err != nil {
 		return nil, err
 	}
 	return users, nil

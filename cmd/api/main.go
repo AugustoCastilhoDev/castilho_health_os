@@ -38,6 +38,7 @@ func main() {
 	h := &api.Handlers{
 		Auth:        handlers.NewAuthHandler(service.NewAuthService(tenantRepo, userRepo, issuer)),
 		Tenant:      handlers.NewTenantHandler(service.NewTenantService(gdb, tenantRepo)),
+		User:        handlers.NewUserHandler(service.NewUserService(userRepo)),
 		Patient:     handlers.NewPatientHandler(service.NewPatientService(patientRepo)),
 		Appointment: handlers.NewAppointmentHandler(service.NewAppointmentService(appointmentRepo)),
 		Financial:   handlers.NewFinancialHandler(service.NewFinancialService(ruleRepo, txRepo)),
