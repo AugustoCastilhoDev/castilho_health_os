@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
-import { Cake, IdCard, Mail, Phone, Plus } from 'lucide-react'
+import { Link, useParams } from 'react-router-dom'
+import { Cake, IdCard, Mail, Pencil, Phone, Plus } from 'lucide-react'
 import { PatientTimeline, type TimelineEntry } from '../components/prontuario/PatientTimeline'
 import { calculateAge, initials } from '../lib/format'
 import { useAuth } from '../lib/auth/AuthContext'
@@ -124,13 +124,22 @@ export function PatientRecordPage() {
             )}
           </div>
 
-          <button
-            type="button"
-            className="flex items-center gap-2 rounded-lg bg-brand-action px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand-action-hover"
-          >
-            <Plus size={18} />
-            Novo Registro
-          </button>
+          <div className="flex gap-2">
+            <Link
+              to={`/pacientes/${patient.id}/editar`}
+              className="flex items-center gap-2 rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-medium text-brand-text hover:bg-slate-50"
+            >
+              <Pencil size={16} />
+              Editar
+            </Link>
+            <button
+              type="button"
+              className="flex items-center gap-2 rounded-lg bg-brand-action px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand-action-hover"
+            >
+              <Plus size={18} />
+              Novo Registro
+            </button>
+          </div>
         </div>
 
         <div>

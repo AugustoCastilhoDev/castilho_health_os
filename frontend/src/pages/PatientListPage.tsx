@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Search } from 'lucide-react'
+import { Plus, Search } from 'lucide-react'
 import { useAuth } from '../lib/auth/AuthContext'
 import { ApiError } from '../lib/api/client'
 import type { PatientDTO } from '../lib/api/types'
@@ -38,9 +38,18 @@ export function PatientListPage() {
 
   return (
     <>
-      <header className="border-b border-slate-200 bg-brand-surface px-8 py-5">
-        <p className="text-sm text-brand-text-muted">Pacientes</p>
-        <h1 className="text-xl font-semibold text-brand-text">Buscar paciente</h1>
+      <header className="flex items-center justify-between border-b border-slate-200 bg-brand-surface px-8 py-5">
+        <div>
+          <p className="text-sm text-brand-text-muted">Pacientes</p>
+          <h1 className="text-xl font-semibold text-brand-text">Buscar paciente</h1>
+        </div>
+        <Link
+          to="/pacientes/novo"
+          className="flex items-center gap-2 rounded-lg bg-brand-action px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand-action-hover"
+        >
+          <Plus size={18} />
+          Novo Paciente
+        </Link>
       </header>
 
       <main className="p-6">

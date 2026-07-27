@@ -6,6 +6,7 @@ import { LoginPage } from './pages/LoginPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { AgendaPage } from './pages/AgendaPage'
 import { PatientListPage } from './pages/PatientListPage'
+import { PatientFormPage } from './pages/PatientFormPage'
 import { PatientRecordPage } from './pages/PatientRecordPage'
 
 function App() {
@@ -19,6 +20,8 @@ function App() {
               <Route index element={<DashboardPage />} />
               <Route path="agenda" element={<AgendaPage />} />
               <Route path="pacientes" element={<PatientListPage />} />
+              <Route path="pacientes/novo" element={<PatientFormPage />} />
+              <Route path="pacientes/:patientId/editar" element={<PatientFormPage />} />
               <Route path="pacientes/:patientId" element={<PatientRecordPage />} />
             </Route>
           </Route>

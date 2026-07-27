@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { ChevronLeft, ChevronRight, Plus } from 'lucide-react'
 import { WeeklyAgendaGrid, type AgendaAppointment } from '../components/agenda/WeeklyAgendaGrid'
+import { NewAppointmentModal } from '../components/agenda/NewAppointmentModal'
+import { AppointmentDetailModal } from '../components/agenda/AppointmentDetailModal'
 import { addDays, formatWeekRange, startOfWeek } from '../lib/format'
 import { APPOINTMENT_STATUS_LABEL, APPOINTMENT_STATUS_STYLE, type AppointmentStatus } from '../lib/appointmentStatus'
 import { useAuth } from '../lib/auth/AuthContext'
@@ -23,6 +25,9 @@ export function AgendaPage() {
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date()))
   const [appointments, setAppointments] = useState<AgendaAppointment[]>([])
   const [error, setError] = useState<string | null>(null)
+  const [reloadTick, setReloadTick] = useState(0)
+  const [showNewAppointment, setShowNewAppointment] = useState(false)
+  const [selectedAppointment, setSelectedAppointment] = useState<AgendaAppointment | null>(null)
 
   useEffect(() => {
     if (!professionalId) return
@@ -67,7 +72,7 @@ export function AgendaPage() {
     return () => {
       cancelled = true
     }
-  }, [professionalId, weekStart, apiFetch])
+  }, [professionalId, weekStart, reloadTick, apiFetch])
 
   return (
     <>
@@ -122,7 +127,9 @@ export function AgendaPage() {
 
           <button
             type="button"
-            className="flex items-center gap-2 rounded-lg bg-brand-action px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand-action-hover"
+            onClick={() => setShowNewAppointment(true)}
+            disabled={!professionalId}
+            className="flex items-center gap-2 rounded-lg bg-brand-action px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand-action-hover disabled:cursor-not-allowed disabled:opacity-60"
           >
             <Plus size={18} />
             Novo Agendamento
@@ -137,7 +144,11 @@ export function AgendaPage() {
           </p>
         )}
 
-        <WeeklyAgendaGrid weekStart={weekStart} appointments={appointments} />
+        <WeeklyAgendaGrid
+          weekStart={weekStart}
+          appointments={appointments}
+          onAppointmentClick={setSelectedAppointment}
+        />
 
         <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2">
           {LEGEND_STATUSES.map((status) => (
@@ -148,6 +159,29 @@ export function AgendaPage() {
           ))}
         </div>
       </main>
+
+      {showNewAppointment && (
+        <NewAppointmentModal
+          professionals={professionals}
+          defaultProfessionalId={professionalId}
+          onClose={() => setShowNewAppointment(false)}
+          onCreated={() => {
+            setShowNewAppointment(false)
+            setReloadTick((t) => t + 1)
+          }}
+        />
+      )}
+
+      {selectedAppointment && (
+        <AppointmentDetailModal
+          appointment={selectedAppointment}
+          onClose={() => setSelectedAppointment(null)}
+          onUpdated={() => {
+            setSelectedAppointment(null)
+            setReloadTick((t) => t + 1)
+          }}
+        />
+      )}
     </>
   )
 }

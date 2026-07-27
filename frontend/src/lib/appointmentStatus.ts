@@ -42,3 +42,17 @@ export const APPOINTMENT_STATUS_DOT: Record<AppointmentStatus, string> = {
   CANCELLED: 'bg-brand-alert',
   NO_SHOW: 'bg-brand-alert',
 }
+
+// Mirrors validTransitions in internal/domain/models/appointment.go exactly
+// — this is only used to decide which action buttons to show; the backend
+// re-validates every transition regardless, so drift here just means a
+// button that 400s, never an actual bypass of the state machine.
+export const APPOINTMENT_NEXT_STATUSES: Record<AppointmentStatus, AppointmentStatus[]> = {
+  SCHEDULED: ['CONFIRMED', 'CANCELLED', 'WAITING', 'NO_SHOW'],
+  CONFIRMED: ['WAITING', 'CANCELLED', 'NO_SHOW'],
+  WAITING: ['IN_PROGRESS', 'CANCELLED'],
+  IN_PROGRESS: ['COMPLETED'],
+  COMPLETED: [],
+  CANCELLED: [],
+  NO_SHOW: [],
+}

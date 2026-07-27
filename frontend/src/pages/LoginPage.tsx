@@ -1,32 +1,9 @@
 import { useState, type FormEvent } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { Activity } from 'lucide-react'
+import { TextField } from '../components/common/TextField'
 import { useAuth } from '../lib/auth/AuthContext'
 import { ApiError } from '../lib/api/client'
-
-interface FieldProps {
-  label: string
-  type?: string
-  value: string
-  onChange: (value: string) => void
-  placeholder?: string
-}
-
-function Field({ label, type = 'text', value, onChange, placeholder }: FieldProps) {
-  return (
-    <label className="block">
-      <span className="mb-1 block text-sm font-medium text-brand-text">{label}</span>
-      <input
-        type={type}
-        required
-        value={value}
-        placeholder={placeholder}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-brand-text focus:border-brand-action focus:outline-none focus:ring-1 focus:ring-brand-action"
-      />
-    </label>
-  )
-}
 
 export function LoginPage() {
   const { login, token } = useAuth()
@@ -62,9 +39,9 @@ export function LoginPage() {
         </div>
 
         <form className="space-y-4" onSubmit={handleSubmit}>
-          <Field label="Clínica" value={tenantSlug} onChange={setTenantSlug} placeholder="minha-clinica" />
-          <Field label="E-mail" type="email" value={email} onChange={setEmail} />
-          <Field label="Senha" type="password" value={password} onChange={setPassword} />
+          <TextField label="Clínica" value={tenantSlug} onChange={setTenantSlug} placeholder="minha-clinica" required />
+          <TextField label="E-mail" type="email" value={email} onChange={setEmail} required />
+          <TextField label="Senha" type="password" value={password} onChange={setPassword} required />
 
           {error && <p className="text-sm text-brand-alert-text">{error}</p>}
 

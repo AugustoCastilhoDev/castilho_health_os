@@ -14,6 +14,7 @@ interface WeeklyAgendaGridProps {
   appointments: AgendaAppointment[]
   startHour?: number
   endHour?: number
+  onAppointmentClick?: (appointment: AgendaAppointment) => void
 }
 
 const SLOT_MINUTES = 30
@@ -25,6 +26,7 @@ export function WeeklyAgendaGrid({
   appointments,
   startHour = 8,
   endHour = 19,
+  onAppointmentClick,
 }: WeeklyAgendaGridProps) {
   const today = new Date()
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
@@ -114,16 +116,18 @@ export function WeeklyAgendaGrid({
           const rowSpan = Math.max(1, Math.round(appt.durationMin / SLOT_MINUTES))
 
           return (
-            <div
+            <button
               key={appt.id}
+              type="button"
+              onClick={() => onAppointmentClick?.(appt)}
               style={{ gridColumn: dayIdx + 2, gridRow: `${rowStart} / span ${rowSpan}` }}
-              className={`z-10 m-0.5 overflow-hidden rounded-md border px-2 py-1 text-xs leading-tight ${APPOINTMENT_STATUS_STYLE[appt.status]}`}
+              className={`z-10 m-0.5 overflow-hidden rounded-md border px-2 py-1 text-left text-xs leading-tight transition-shadow hover:shadow-md ${APPOINTMENT_STATUS_STYLE[appt.status]}`}
             >
               <p className="truncate font-semibold">
                 {formatTime(appt.scheduledAt)} · {appt.patientName}
               </p>
               <p className="truncate opacity-80">{APPOINTMENT_STATUS_LABEL[appt.status]}</p>
-            </div>
+            </button>
           )
         })}
       </div>
