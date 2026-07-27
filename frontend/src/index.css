@@ -1,0 +1,32 @@
+@import "tailwindcss";
+
+/*
+ * Castilho Health OS — design tokens ("Clean Tech: confiança & acolhimento").
+ * These alias the exact hex values from the approved palette onto semantic
+ * names (bg-brand-*, text-brand-*), so screens read by intent ("this is the
+ * action color") instead of by raw Tailwind shade — the values themselves
+ * are the stock slate/sky/emerald/rose scale, chosen deliberately over pure
+ * black/red to keep the clinical UI calm rather than stark.
+ */
+@theme {
+  --color-brand-bg: #f8fafc; /* slate-50 — app background */
+  --color-brand-bg-alt: #f1f5f9; /* slate-100 — alt app background */
+  --color-brand-surface: #ffffff; /* cards, containers, agenda rows */
+  --color-brand-sidebar: #0f172a; /* slate-900 — sidebar / primary nav */
+
+  --color-brand-text: #1e293b; /* slate-800 — headings / primary text */
+  --color-brand-text-muted: #64748b; /* slate-500 — secondary text */
+
+  --color-brand-action: #0284c7; /* sky-600 — primary action buttons */
+  --color-brand-action-hover: #0369a1; /* sky-700 */
+
+  --color-brand-success: #10b981; /* emerald-500 — confirmed / paid */
+  --color-brand-success-text: #059669; /* emerald-600 */
+
+  --color-brand-alert: #f43f5e; /* rose-500 — cancellations / pending */
+  --color-brand-alert-text: #e11d48; /* rose-600 */
+}
+
+body {
+  @apply bg-brand-bg text-brand-text antialiased;
+}
