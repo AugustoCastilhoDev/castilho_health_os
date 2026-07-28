@@ -59,6 +59,7 @@ export interface AppointmentDTO {
 export interface FinancialTransactionDTO {
   id: string
   tenant_id: string
+  created_at: string
   appointment_id?: string
   patient_id?: string
   professional_id?: string
@@ -75,4 +76,25 @@ export interface FinancialTransactionDTO {
   due_date?: string
   paid_at?: string
   notes?: string
+}
+
+export interface FinancialTransactionListDTO {
+  items: FinancialTransactionDTO[]
+  total: number
+  page: number
+  page_size: number
+}
+
+export interface FinancialRuleDTO {
+  id: string
+  tenant_id: string
+  professional_id: string
+  type: string
+  percentage?: number
+  fixed_amount_cents?: number
+  procedure_code?: string
+  insurance_plan?: string
+  fee_deduction: string
+  priority: number
+  is_active: boolean
 }

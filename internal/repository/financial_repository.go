@@ -107,6 +107,22 @@ type FinancialTransactionRepository interface {
 	MarkPaid(ctx context.Context, tenantID, id uuid.UUID, paidAt time.Time) error
 	ListByAppointment(ctx context.Context, tenantID, appointmentID uuid.UUID) ([]models.FinancialTransaction, error)
 	FindPayoutBySource(ctx context.Context, tenantID, sourceTransactionID uuid.UUID) (*models.FinancialTransaction, error)
+	// ListByTenant backs the Financeiro screen's ledger view: no appointment
+	// or professional is known upfront, so callers filter by Type/Status
+	// instead. Returns the page of matching rows plus the total count (for
+	// pagination) filtered by the same conditions.
+	ListByTenant(ctx context.Context, tenantID uuid.UUID, filter TransactionFilter) ([]models.FinancialTransaction, int64, error)
+}
+
+// TransactionFilter narrows ListByTenant's query. A nil Type/Status means
+// "don't filter on this dimension". Limit/Offset are always applied by the
+// caller (FinancialService) after defaulting/capping Limit, so the
+// repository itself never has to guess a sane default.
+type TransactionFilter struct {
+	Type   *models.TransactionType
+	Status *models.TransactionStatus
+	Limit  int
+	Offset int
 }
 
 type financialTransactionRepository struct {
@@ -163,6 +179,28 @@ func (r *financialTransactionRepository) ListByAppointment(ctx context.Context, 
 		return nil, err
 	}
 	return txs, nil
+}
+
+func (r *financialTransactionRepository) ListByTenant(ctx context.Context, tenantID uuid.UUID, filter TransactionFilter) ([]models.FinancialTransaction, int64, error) {
+	query := r.db.WithContext(ctx).Model(&models.FinancialTransaction{}).Where("tenant_id = ?", tenantID)
+	if filter.Type != nil {
+		query = query.Where("type = ?", *filter.Type)
+	}
+	if filter.Status != nil {
+		query = query.Where("status = ?", *filter.Status)
+	}
+
+	var total int64
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	var txs []models.FinancialTransaction
+	err := query.Order("created_at DESC").Limit(filter.Limit).Offset(filter.Offset).Find(&txs).Error
+	if err != nil {
+		return nil, 0, err
+	}
+	return txs, total, nil
 }
 
 func (r *financialTransactionRepository) FindPayoutBySource(ctx context.Context, tenantID, sourceTransactionID uuid.UUID) (*models.FinancialTransaction, error) {

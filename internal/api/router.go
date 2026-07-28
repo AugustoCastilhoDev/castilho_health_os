@@ -92,6 +92,7 @@ func RegisterRoutes(app *fiber.App, h *Handlers, issuer *auth.JWTIssuer, healthC
 	// (its Type field) reveals which case applies.
 	transactions := protected.Group("/financial-transactions")
 	transactions.Post("/", h.Financial.CreateTransaction)
+	transactions.Get("/", h.Financial.ListTransactions)
 	transactions.Get("/:id", h.Financial.GetTransaction)
 	transactions.Post("/:id/mark-paid", finance, h.Financial.MarkPaid)
 	transactions.Get("/appointment/:appointmentID", h.Financial.ListTransactionsByAppointment)

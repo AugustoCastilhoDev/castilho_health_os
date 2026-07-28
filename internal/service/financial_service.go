@@ -90,3 +90,23 @@ func (s *FinancialService) MarkPaid(ctx context.Context, tenantID, id uuid.UUID)
 func (s *FinancialService) ListTransactionsByAppointment(ctx context.Context, tenantID, appointmentID uuid.UUID) ([]models.FinancialTransaction, error) {
 	return s.transactions.ListByAppointment(ctx, tenantID, appointmentID)
 }
+
+const (
+	defaultTransactionPageSize = 20
+	maxTransactionPageSize     = 100
+)
+
+// ListTransactions backs the Financeiro screen's ledger. Limit is defaulted
+// and capped here rather than trusted from the request, since it flows
+// straight into a SQL LIMIT.
+func (s *FinancialService) ListTransactions(ctx context.Context, tenantID uuid.UUID, filter repository.TransactionFilter) ([]models.FinancialTransaction, int64, error) {
+	if filter.Limit <= 0 {
+		filter.Limit = defaultTransactionPageSize
+	} else if filter.Limit > maxTransactionPageSize {
+		filter.Limit = maxTransactionPageSize
+	}
+	if filter.Offset < 0 {
+		filter.Offset = 0
+	}
+	return s.transactions.ListByTenant(ctx, tenantID, filter)
+}

@@ -9,6 +9,7 @@ import (
 
 	appmiddleware "github.com/castilho/health-os/internal/api/middleware"
 	"github.com/castilho/health-os/internal/domain/models"
+	"github.com/castilho/health-os/internal/repository"
 	"github.com/castilho/health-os/internal/service"
 )
 
@@ -160,6 +161,39 @@ func (h *FinancialHandler) MarkPaid(c *fiber.Ctx) error {
 	}
 
 	return c.SendStatus(fiber.StatusNoContent)
+}
+
+// ListTransactions backs the Financeiro screen's ledger view. Query params:
+// type, status (both optional, exact match against the enum strings) and
+// page/page_size (both optional, 1-indexed page).
+func (h *FinancialHandler) ListTransactions(c *fiber.Ctx) error {
+	var filter repository.TransactionFilter
+	if v := c.Query("type"); v != "" {
+		t := models.TransactionType(v)
+		filter.Type = &t
+	}
+	if v := c.Query("status"); v != "" {
+		s := models.TransactionStatus(v)
+		filter.Status = &s
+	}
+	pageSize := c.QueryInt("page_size", 20)
+	page := c.QueryInt("page", 1)
+	if page < 1 {
+		page = 1
+	}
+	filter.Limit = pageSize
+	filter.Offset = (page - 1) * pageSize
+
+	txs, total, err := h.financial.ListTransactions(c.Context(), appmiddleware.TenantID(c), filter)
+	if err != nil {
+		return respondErr(c, err)
+	}
+	return c.JSON(fiber.Map{
+		"items":     txs,
+		"total":     total,
+		"page":      page,
+		"page_size": pageSize,
+	})
 }
 
 func (h *FinancialHandler) ListTransactionsByAppointment(c *fiber.Ctx) error {

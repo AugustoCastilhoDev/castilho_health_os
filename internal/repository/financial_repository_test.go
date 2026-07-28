@@ -110,3 +110,66 @@ func TestFinancialTransactionRepository_FindPayoutBySource_Idempotency(t *testin
 	require.NoError(t, err)
 	assert.Equal(t, payout.ID, found.ID)
 }
+
+func TestFinancialTransactionRepository_ListByTenant_FiltersAndIsTenantScoped(t *testing.T) {
+	gdb := testutil.ConnectDB(t)
+	tenantA := testutil.NewTenant(t, gdb)
+	tenantB := testutil.NewTenant(t, gdb)
+	doctorA := testutil.NewUser(t, gdb, tenantA.ID, models.RoleDoctor)
+	doctorB := testutil.NewUser(t, gdb, tenantB.ID, models.RoleDoctor)
+	repo := repository.NewFinancialTransactionRepository(gdb)
+	ctx := context.Background()
+
+	pendingIncome := &models.FinancialTransaction{
+		ProfessionalID:   &doctorA.ID,
+		Type:             models.TransactionPatientPayment,
+		GrossAmountCents: 10000,
+		NetAmountCents:   10000,
+	}
+	require.NoError(t, repo.Create(ctx, tenantA.ID, pendingIncome))
+
+	paidPayout := &models.FinancialTransaction{
+		ProfessionalID:   &doctorA.ID,
+		Type:             models.TransactionProfessionalPayout,
+		GrossAmountCents: 7000,
+		NetAmountCents:   7000,
+		Status:           models.TransactionPaid,
+	}
+	require.NoError(t, repo.Create(ctx, tenantA.ID, paidPayout))
+
+	otherTenantIncome := &models.FinancialTransaction{
+		ProfessionalID:   &doctorB.ID,
+		Type:             models.TransactionPatientPayment,
+		GrossAmountCents: 99999,
+		NetAmountCents:   99999,
+	}
+	require.NoError(t, repo.Create(ctx, tenantB.ID, otherTenantIncome))
+
+	// No filter: only tenantA's two rows, never tenantB's.
+	all, total, err := repo.ListByTenant(ctx, tenantA.ID, repository.TransactionFilter{Limit: 10})
+	require.NoError(t, err)
+	assert.EqualValues(t, 2, total)
+	assert.Len(t, all, 2)
+
+	// Filter by type: only the PATIENT_PAYMENT row.
+	incomeType := models.TransactionPatientPayment
+	incomes, total, err := repo.ListByTenant(ctx, tenantA.ID, repository.TransactionFilter{Type: &incomeType, Limit: 10})
+	require.NoError(t, err)
+	assert.EqualValues(t, 1, total)
+	require.Len(t, incomes, 1)
+	assert.Equal(t, pendingIncome.ID, incomes[0].ID)
+
+	// Filter by status: only the PAID payout.
+	paidStatus := models.TransactionPaid
+	paid, total, err := repo.ListByTenant(ctx, tenantA.ID, repository.TransactionFilter{Status: &paidStatus, Limit: 10})
+	require.NoError(t, err)
+	assert.EqualValues(t, 1, total)
+	require.Len(t, paid, 1)
+	assert.Equal(t, paidPayout.ID, paid[0].ID)
+
+	// Pagination: limit 1 still reports the true total of 2.
+	page, total, err := repo.ListByTenant(ctx, tenantA.ID, repository.TransactionFilter{Limit: 1, Offset: 0})
+	require.NoError(t, err)
+	assert.EqualValues(t, 2, total)
+	assert.Len(t, page, 1)
+}

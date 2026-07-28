@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/castilho/health-os/internal/domain/models"
+	"github.com/castilho/health-os/internal/repository"
 )
 
 // Hand-rolled function-field fakes for the repository interfaces — no
@@ -145,6 +146,7 @@ type fakeFinancialTransactionRepo struct {
 	markPaidFn           func(ctx context.Context, tenantID, id uuid.UUID, paidAt time.Time) error
 	listByAppointmentFn  func(ctx context.Context, tenantID, appointmentID uuid.UUID) ([]models.FinancialTransaction, error)
 	findPayoutBySourceFn func(ctx context.Context, tenantID, sourceTransactionID uuid.UUID) (*models.FinancialTransaction, error)
+	listByTenantFn       func(ctx context.Context, tenantID uuid.UUID, filter repository.TransactionFilter) ([]models.FinancialTransaction, int64, error)
 }
 
 func (f *fakeFinancialTransactionRepo) Create(ctx context.Context, tenantID uuid.UUID, tx *models.FinancialTransaction) error {
@@ -161,4 +163,7 @@ func (f *fakeFinancialTransactionRepo) ListByAppointment(ctx context.Context, te
 }
 func (f *fakeFinancialTransactionRepo) FindPayoutBySource(ctx context.Context, tenantID, sourceTransactionID uuid.UUID) (*models.FinancialTransaction, error) {
 	return f.findPayoutBySourceFn(ctx, tenantID, sourceTransactionID)
+}
+func (f *fakeFinancialTransactionRepo) ListByTenant(ctx context.Context, tenantID uuid.UUID, filter repository.TransactionFilter) ([]models.FinancialTransaction, int64, error) {
+	return f.listByTenantFn(ctx, tenantID, filter)
 }

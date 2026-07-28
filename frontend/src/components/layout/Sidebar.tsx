@@ -12,12 +12,9 @@ function navLinkClass(isActive: boolean): string {
   }`
 }
 
-// Financeiro/Estoque don't have screens yet — rendered inert rather than
-// linking somewhere that 404s, so the shell still reads as complete.
-const comingSoon = [
-  { label: 'Financeiro', icon: Wallet },
-  { label: 'Estoque', icon: Package },
-]
+// Estoque doesn't have a screen yet — rendered inert rather than linking
+// somewhere that 404s, so the shell still reads as complete.
+const comingSoon = [{ label: 'Estoque', icon: Package }]
 
 export function Sidebar({ clinicName, onLogout }: SidebarProps) {
   return (
@@ -45,6 +42,10 @@ export function Sidebar({ clinicName, onLogout }: SidebarProps) {
         <NavLink to="/pacientes" className={({ isActive }) => navLinkClass(isActive)}>
           <Users size={18} />
           Pacientes
+        </NavLink>
+        <NavLink to="/financeiro" className={({ isActive }) => navLinkClass(isActive)}>
+          <Wallet size={18} />
+          Financeiro
         </NavLink>
         {comingSoon.map(({ label, icon: Icon }) => (
           <div

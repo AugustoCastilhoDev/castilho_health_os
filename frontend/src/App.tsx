@@ -8,6 +8,7 @@ import { AgendaPage } from './pages/AgendaPage'
 import { PatientListPage } from './pages/PatientListPage'
 import { PatientFormPage } from './pages/PatientFormPage'
 import { PatientRecordPage } from './pages/PatientRecordPage'
+import { FinancialPage } from './pages/FinancialPage'
 
 function App() {
   return (
@@ -23,6 +24,7 @@ function App() {
               <Route path="pacientes/novo" element={<PatientFormPage />} />
               <Route path="pacientes/:patientId/editar" element={<PatientFormPage />} />
               <Route path="pacientes/:patientId" element={<PatientRecordPage />} />
+              <Route path="financeiro" element={<FinancialPage />} />
             </Route>
           </Route>
         </Routes>
