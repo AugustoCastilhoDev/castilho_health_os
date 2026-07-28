@@ -167,3 +167,47 @@ func (f *fakeFinancialTransactionRepo) FindPayoutBySource(ctx context.Context, t
 func (f *fakeFinancialTransactionRepo) ListByTenant(ctx context.Context, tenantID uuid.UUID, filter repository.TransactionFilter) ([]models.FinancialTransaction, int64, error) {
 	return f.listByTenantFn(ctx, tenantID, filter)
 }
+
+type fakeMedicalRecordRepo struct {
+	createFn        func(ctx context.Context, tenantID uuid.UUID, r *models.MedicalRecord) error
+	findFn          func(ctx context.Context, tenantID, id uuid.UUID) (*models.MedicalRecord, error)
+	listByPatientFn func(ctx context.Context, tenantID, patientID uuid.UUID) ([]models.MedicalRecord, error)
+	updateFn        func(ctx context.Context, tenantID uuid.UUID, r *models.MedicalRecord) error
+	lockFn          func(ctx context.Context, tenantID, id, lockedByID uuid.UUID) (*models.MedicalRecord, error)
+}
+
+func (f *fakeMedicalRecordRepo) Create(ctx context.Context, tenantID uuid.UUID, r *models.MedicalRecord) error {
+	return f.createFn(ctx, tenantID, r)
+}
+func (f *fakeMedicalRecordRepo) FindByID(ctx context.Context, tenantID, id uuid.UUID) (*models.MedicalRecord, error) {
+	return f.findFn(ctx, tenantID, id)
+}
+func (f *fakeMedicalRecordRepo) ListByPatient(ctx context.Context, tenantID, patientID uuid.UUID) ([]models.MedicalRecord, error) {
+	return f.listByPatientFn(ctx, tenantID, patientID)
+}
+func (f *fakeMedicalRecordRepo) Update(ctx context.Context, tenantID uuid.UUID, r *models.MedicalRecord) error {
+	return f.updateFn(ctx, tenantID, r)
+}
+func (f *fakeMedicalRecordRepo) Lock(ctx context.Context, tenantID, id, lockedByID uuid.UUID) (*models.MedicalRecord, error) {
+	return f.lockFn(ctx, tenantID, id, lockedByID)
+}
+
+type fakeDocumentTemplateRepo struct {
+	createFn       func(ctx context.Context, tenantID uuid.UUID, t *models.DocumentTemplate) error
+	findFn         func(ctx context.Context, tenantID, id uuid.UUID) (*models.DocumentTemplate, error)
+	updateFn       func(ctx context.Context, tenantID uuid.UUID, t *models.DocumentTemplate) error
+	listByTenantFn func(ctx context.Context, tenantID uuid.UUID) ([]models.DocumentTemplate, error)
+}
+
+func (f *fakeDocumentTemplateRepo) Create(ctx context.Context, tenantID uuid.UUID, t *models.DocumentTemplate) error {
+	return f.createFn(ctx, tenantID, t)
+}
+func (f *fakeDocumentTemplateRepo) FindByID(ctx context.Context, tenantID, id uuid.UUID) (*models.DocumentTemplate, error) {
+	return f.findFn(ctx, tenantID, id)
+}
+func (f *fakeDocumentTemplateRepo) Update(ctx context.Context, tenantID uuid.UUID, t *models.DocumentTemplate) error {
+	return f.updateFn(ctx, tenantID, t)
+}
+func (f *fakeDocumentTemplateRepo) ListByTenant(ctx context.Context, tenantID uuid.UUID) ([]models.DocumentTemplate, error) {
+	return f.listByTenantFn(ctx, tenantID)
+}

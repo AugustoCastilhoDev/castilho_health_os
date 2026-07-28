@@ -13,12 +13,14 @@ import (
 )
 
 type Handlers struct {
-	Auth        *handlers.AuthHandler
-	Tenant      *handlers.TenantHandler
-	User        *handlers.UserHandler
-	Patient     *handlers.PatientHandler
-	Appointment *handlers.AppointmentHandler
-	Financial   *handlers.FinancialHandler
+	Auth             *handlers.AuthHandler
+	Tenant           *handlers.TenantHandler
+	User             *handlers.UserHandler
+	Patient          *handlers.PatientHandler
+	Appointment      *handlers.AppointmentHandler
+	Financial        *handlers.FinancialHandler
+	MedicalRecord    *handlers.MedicalRecordHandler
+	DocumentTemplate *handlers.DocumentTemplateHandler
 }
 
 func RegisterRoutes(app *fiber.App, h *Handlers, issuer *auth.JWTIssuer, healthCheck fiber.Handler) {
@@ -45,6 +47,7 @@ func RegisterRoutes(app *fiber.App, h *Handlers, issuer *auth.JWTIssuer, healthC
 	frontDesk := middleware.RequireRole(models.RoleTenantAdmin, models.RoleReceptionist)
 	admin := middleware.RequireRole(models.RoleTenantAdmin)
 	finance := middleware.RequireRole(models.RoleTenantAdmin, models.RoleFinance)
+	health := middleware.RequireRole(models.RoleDoctor, models.RoleDentist)
 
 	// Get/List are open to any authenticated role (they back "pick a
 	// professional" pickers); mutating a user's account is admin-only.
@@ -66,6 +69,7 @@ func RegisterRoutes(app *fiber.App, h *Handlers, issuer *auth.JWTIssuer, healthC
 	patients.Put("/:id", frontDesk, h.Patient.Update)
 	patients.Delete("/:id", admin, h.Patient.Delete)
 	patients.Get("/:patientID/appointments", h.Appointment.ListByPatient)
+	patients.Get("/:patientID/medical-records", h.MedicalRecord.ListByPatient)
 
 	// Who may trigger which specific status transition (e.g. only the
 	// assigned professional starts IN_PROGRESS) isn't enforced yet — the
@@ -97,6 +101,26 @@ func RegisterRoutes(app *fiber.App, h *Handlers, issuer *auth.JWTIssuer, healthC
 	transactions.Get("/:id", h.Financial.GetTransaction)
 	transactions.Post("/:id/mark-paid", finance, h.Financial.MarkPaid)
 	transactions.Get("/appointment/:appointmentID", h.Financial.ListTransactionsByAppointment)
+
+	// Create/Update/Lock are restricted to health professionals (writing a
+	// clinical note is their call, not front-desk/admin); Get/ListByPatient
+	// stay open to any authenticated role like the rest of the patient
+	// record.
+	medicalRecords := protected.Group("/medical-records")
+	medicalRecords.Post("/", health, h.MedicalRecord.Create)
+	medicalRecords.Get("/:id", h.MedicalRecord.Get)
+	medicalRecords.Put("/:id", health, h.MedicalRecord.Update)
+	medicalRecords.Post("/:id/lock", health, h.MedicalRecord.Lock)
+
+	// Managing the reusable template body is admin-only; Get/List/Generate
+	// are open to any authenticated role since generating an atestado is
+	// normal day-to-day use, not clinic configuration.
+	documentTemplates := protected.Group("/document-templates")
+	documentTemplates.Post("/", admin, h.DocumentTemplate.Create)
+	documentTemplates.Get("/", h.DocumentTemplate.List)
+	documentTemplates.Get("/:id", h.DocumentTemplate.Get)
+	documentTemplates.Put("/:id", admin, h.DocumentTemplate.Update)
+	documentTemplates.Post("/:id/generate", h.DocumentTemplate.Generate)
 
 	protected.Get("/admin/ping", admin, func(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"message": "pong"})

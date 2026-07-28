@@ -1,5 +1,5 @@
 import { Link, NavLink } from 'react-router-dom'
-import { Activity, Calendar, LogOut, Users, Wallet, Package } from 'lucide-react'
+import { Activity, Calendar, LogOut, Users, Wallet, Package, FileText } from 'lucide-react'
 
 interface SidebarProps {
   clinicName: string
@@ -46,6 +46,10 @@ export function Sidebar({ clinicName, onLogout }: SidebarProps) {
         <NavLink to="/financeiro" className={({ isActive }) => navLinkClass(isActive)}>
           <Wallet size={18} />
           Financeiro
+        </NavLink>
+        <NavLink to="/documentos" className={({ isActive }) => navLinkClass(isActive)}>
+          <FileText size={18} />
+          Documentos
         </NavLink>
         {comingSoon.map(({ label, icon: Icon }) => (
           <div

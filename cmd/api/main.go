@@ -35,16 +35,22 @@ func main() {
 	appointmentRepo := repository.NewAppointmentRepository(gdb)
 	ruleRepo := repository.NewFinancialRuleRepository(gdb)
 	txRepo := repository.NewFinancialTransactionRepository(gdb)
+	medicalRecordRepo := repository.NewMedicalRecordRepository(gdb)
+	documentTemplateRepo := repository.NewDocumentTemplateRepository(gdb)
 
 	settlementService := service.NewSettlementService(appointmentRepo, ruleRepo, txRepo)
+	patientService := service.NewPatientService(patientRepo)
+	userService := service.NewUserService(userRepo)
 
 	h := &api.Handlers{
-		Auth:        handlers.NewAuthHandler(service.NewAuthService(tenantRepo, userRepo, issuer)),
-		Tenant:      handlers.NewTenantHandler(service.NewTenantService(gdb, tenantRepo)),
-		User:        handlers.NewUserHandler(service.NewUserService(userRepo)),
-		Patient:     handlers.NewPatientHandler(service.NewPatientService(patientRepo)),
-		Appointment: handlers.NewAppointmentHandler(service.NewAppointmentService(appointmentRepo), settlementService),
-		Financial:   handlers.NewFinancialHandler(service.NewFinancialService(ruleRepo, txRepo), settlementService),
+		Auth:             handlers.NewAuthHandler(service.NewAuthService(tenantRepo, userRepo, issuer)),
+		Tenant:           handlers.NewTenantHandler(service.NewTenantService(gdb, tenantRepo)),
+		User:             handlers.NewUserHandler(userService),
+		Patient:          handlers.NewPatientHandler(patientService),
+		Appointment:      handlers.NewAppointmentHandler(service.NewAppointmentService(appointmentRepo), settlementService),
+		Financial:        handlers.NewFinancialHandler(service.NewFinancialService(ruleRepo, txRepo), settlementService),
+		MedicalRecord:    handlers.NewMedicalRecordHandler(service.NewMedicalRecordService(medicalRecordRepo)),
+		DocumentTemplate: handlers.NewDocumentTemplateHandler(service.NewDocumentTemplateService(documentTemplateRepo), patientService, userService),
 	}
 
 	app := fiber.New()
@@ -53,6 +59,11 @@ func main() {
 		AllowOrigins: cfg.CORSAllowedOrigins,
 		AllowHeaders: "Origin, Content-Type, Accept, Authorization",
 		AllowMethods: "GET,POST,PUT,DELETE,OPTIONS",
+		// Content-Disposition carries the generated document's filename
+		// (see DocumentTemplateHandler.Generate) — browsers hide response
+		// headers from JS on cross-origin requests unless explicitly
+		// exposed, so without this the frontend can't read it.
+		ExposeHeaders: "Content-Disposition",
 	}))
 
 	healthCheck := func(c *fiber.Ctx) error {

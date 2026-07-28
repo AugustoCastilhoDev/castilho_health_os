@@ -17,4 +17,8 @@ var (
 	// ErrInvalidTransition is returned when a requested appointment status
 	// change is not a legal move per models.AppointmentStatus.CanTransitionTo.
 	ErrInvalidTransition = errors.New("repository: invalid appointment status transition")
+
+	// ErrLocked is returned when an update targets a row that has been
+	// finalized (e.g. a locked MedicalRecord) and must no longer change.
+	ErrLocked = errors.New("repository: record is locked")
 )

@@ -1,19 +1,29 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { Cake, IdCard, Mail, Pencil, Phone, Plus } from 'lucide-react'
+import { Cake, FileOutput, IdCard, Mail, Pencil, Phone, Plus } from 'lucide-react'
 import { PatientTimeline, type TimelineEntry } from '../components/prontuario/PatientTimeline'
+import { MedicalRecordFormModal } from '../components/prontuario/MedicalRecordFormModal'
+import { GenerateDocumentModal } from '../components/prontuario/GenerateDocumentModal'
 import { calculateAge, initials } from '../lib/format'
 import { useAuth } from '../lib/auth/AuthContext'
 import { ApiError } from '../lib/api/client'
-import type { AppointmentDTO, PatientDTO, UserDTO } from '../lib/api/types'
+import type { AppointmentDTO, MedicalRecordDTO, PatientDTO, UserDTO } from '../lib/api/types'
 import type { AppointmentStatus } from '../lib/appointmentStatus'
+import type { MedicalRecordType } from '../lib/medicalRecord'
+
+const CAN_WRITE_RECORDS_ROLES = new Set(['DOCTOR', 'DENTIST'])
 
 export function PatientRecordPage() {
   const { patientId } = useParams<{ patientId: string }>()
-  const { apiFetch } = useAuth()
+  const { apiFetch, user } = useAuth()
   const [patient, setPatient] = useState<PatientDTO | null>(null)
   const [timeline, setTimeline] = useState<TimelineEntry[]>([])
   const [error, setError] = useState<string | null>(null)
+  const [reloadTick, setReloadTick] = useState(0)
+  const [editingRecord, setEditingRecord] = useState<MedicalRecordDTO | 'new' | null>(null)
+  const [generatingDocument, setGeneratingDocument] = useState(false)
+
+  const canWriteRecords = user ? CAN_WRITE_RECORDS_ROLES.has(user.role) : false
 
   useEffect(() => {
     if (!patientId) return
@@ -22,14 +32,18 @@ export function PatientRecordPage() {
     async function load() {
       setError(null)
       try {
-        const [patientData, appointments] = await Promise.all([
+        const [patientData, appointments, records] = await Promise.all([
           apiFetch<PatientDTO>(`/api/patients/${patientId}`),
           apiFetch<AppointmentDTO[]>(`/api/patients/${patientId}/appointments`),
+          apiFetch<MedicalRecordDTO[]>(`/api/patients/${patientId}/medical-records`),
         ])
 
-        // Appointment doesn't embed the professional (only professional_id)
-        // — resolve display names with one lookup per unique professional.
-        const uniqueProfessionalIds = [...new Set(appointments.map((a) => a.professional_id))]
+        // Neither Appointment nor MedicalRecord embeds the professional
+        // (only professional_id) — resolve display names with one lookup
+        // per unique professional across both lists.
+        const uniqueProfessionalIds = [
+          ...new Set([...appointments.map((a) => a.professional_id), ...records.map((r) => r.professional_id)]),
+        ]
         const professionals = await Promise.all(
           uniqueProfessionalIds.map((id) => apiFetch<UserDTO>(`/api/users/${id}`)),
         )
@@ -37,17 +51,29 @@ export function PatientRecordPage() {
 
         if (cancelled) return
         setPatient(patientData)
+
+        const appointmentEntries: TimelineEntry[] = appointments.map((a) => ({
+          kind: 'appointment',
+          id: a.id,
+          date: new Date(a.scheduled_at),
+          professionalName: nameByProfessionalId.get(a.professional_id) ?? 'Profissional',
+          status: a.status as AppointmentStatus,
+          notes: a.cancellation_reason,
+        }))
+        const recordEntries: TimelineEntry[] = records.map((r) => ({
+          kind: 'record',
+          id: r.id,
+          date: new Date(r.created_at),
+          professionalName: nameByProfessionalId.get(r.professional_id) ?? 'Profissional',
+          type: r.type as MedicalRecordType,
+          content: r.content,
+          isLocked: r.is_locked,
+          onEdit: canWriteRecords ? () => setEditingRecord(r) : undefined,
+          onLock: canWriteRecords ? () => handleLock(r.id) : undefined,
+        }))
+
         setTimeline(
-          appointments
-            .slice()
-            .sort((a, b) => new Date(b.scheduled_at).getTime() - new Date(a.scheduled_at).getTime())
-            .map((a) => ({
-              id: a.id,
-              date: new Date(a.scheduled_at),
-              professionalName: nameByProfessionalId.get(a.professional_id) ?? 'Profissional',
-              status: a.status as AppointmentStatus,
-              notes: a.cancellation_reason,
-            })),
+          [...appointmentEntries, ...recordEntries].sort((a, b) => b.date.getTime() - a.date.getTime()),
         )
       } catch (err) {
         if (!cancelled) {
@@ -60,7 +86,18 @@ export function PatientRecordPage() {
     return () => {
       cancelled = true
     }
-  }, [patientId, apiFetch])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [patientId, apiFetch, reloadTick])
+
+  async function handleLock(recordId: string) {
+    setError(null)
+    try {
+      await apiFetch(`/api/medical-records/${recordId}/lock`, { method: 'POST' })
+      setReloadTick((t) => t + 1)
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Não foi possível finalizar o registro.')
+    }
+  }
 
   if (error) {
     return (
@@ -134,11 +171,22 @@ export function PatientRecordPage() {
             </Link>
             <button
               type="button"
-              className="flex items-center gap-2 rounded-lg bg-brand-action px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand-action-hover"
+              onClick={() => setGeneratingDocument(true)}
+              className="flex items-center gap-2 rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-medium text-brand-text hover:bg-slate-50"
             >
-              <Plus size={18} />
-              Novo Registro
+              <FileOutput size={16} />
+              Gerar Documento
             </button>
+            {canWriteRecords && (
+              <button
+                type="button"
+                onClick={() => setEditingRecord('new')}
+                className="flex items-center gap-2 rounded-lg bg-brand-action px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand-action-hover"
+              >
+                <Plus size={18} />
+                Novo Registro
+              </button>
+            )}
           </div>
         </div>
 
@@ -149,6 +197,27 @@ export function PatientRecordPage() {
           <PatientTimeline entries={timeline} />
         </div>
       </main>
+
+      {editingRecord && user && (
+        <MedicalRecordFormModal
+          patientId={patient.id}
+          professionalId={user.id}
+          existingRecord={editingRecord === 'new' ? undefined : editingRecord}
+          onClose={() => setEditingRecord(null)}
+          onSaved={() => {
+            setEditingRecord(null)
+            setReloadTick((t) => t + 1)
+          }}
+        />
+      )}
+
+      {generatingDocument && (
+        <GenerateDocumentModal
+          patientId={patient.id}
+          professionalId={canWriteRecords ? user?.id : undefined}
+          onClose={() => setGeneratingDocument(false)}
+        />
+      )}
     </>
   )
 }

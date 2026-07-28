@@ -98,3 +98,26 @@ export interface FinancialRuleDTO {
   priority: number
   is_active: boolean
 }
+
+export interface MedicalRecordDTO {
+  id: string
+  tenant_id: string
+  created_at: string
+  patient_id: string
+  professional_id: string
+  appointment_id?: string
+  type: string
+  content: string
+  is_locked: boolean
+  locked_at?: string
+  locked_by_id?: string
+}
+
+export interface DocumentTemplateDTO {
+  id: string
+  tenant_id: string
+  name: string
+  type: string
+  content: string
+  is_active: boolean
+}
