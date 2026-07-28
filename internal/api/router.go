@@ -21,6 +21,7 @@ type Handlers struct {
 	Financial        *handlers.FinancialHandler
 	MedicalRecord    *handlers.MedicalRecordHandler
 	DocumentTemplate *handlers.DocumentTemplateHandler
+	PatientDocument  *handlers.PatientDocumentHandler
 }
 
 func RegisterRoutes(app *fiber.App, h *Handlers, issuer *auth.JWTIssuer, healthCheck fiber.Handler) {
@@ -70,6 +71,13 @@ func RegisterRoutes(app *fiber.App, h *Handlers, issuer *auth.JWTIssuer, healthC
 	patients.Delete("/:id", admin, h.Patient.Delete)
 	patients.Get("/:patientID/appointments", h.Appointment.ListByPatient)
 	patients.Get("/:patientID/medical-records", h.MedicalRecord.ListByPatient)
+	// Two-step upload (see PatientDocumentHandler): step 1 mints a presigned
+	// PUT URL, the browser PUTs the bytes straight to R2, step 2 persists
+	// the metadata row. Open to any authenticated role, same as front-desk
+	// registering a payment.
+	patients.Post("/:patientID/documents/upload-url", h.PatientDocument.CreateUploadURL)
+	patients.Post("/:patientID/documents", h.PatientDocument.Create)
+	patients.Get("/:patientID/documents", h.PatientDocument.ListByPatient)
 
 	// Who may trigger which specific status transition (e.g. only the
 	// assigned professional starts IN_PROGRESS) isn't enforced yet — the
@@ -121,6 +129,13 @@ func RegisterRoutes(app *fiber.App, h *Handlers, issuer *auth.JWTIssuer, healthC
 	documentTemplates.Get("/:id", h.DocumentTemplate.Get)
 	documentTemplates.Put("/:id", admin, h.DocumentTemplate.Update)
 	documentTemplates.Post("/:id/generate", h.DocumentTemplate.Generate)
+
+	// Download is open to any authenticated role (viewing an exam is normal
+	// clinical work); deleting a patient file outright is admin-only, same
+	// sensitivity level as Patient.Delete.
+	patientDocuments := protected.Group("/patient-documents")
+	patientDocuments.Get("/:id/download-url", h.PatientDocument.DownloadURL)
+	patientDocuments.Delete("/:id", admin, h.PatientDocument.Delete)
 
 	protected.Get("/admin/ping", admin, func(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"message": "pong"})

@@ -100,3 +100,18 @@ func (c *R2Client) PresignDownload(ctx context.Context, fileKey string, expiresI
 	}
 	return req.URL, nil
 }
+
+// DeleteObject removes the object outright — used when a PatientDocument
+// row is deleted, so the file doesn't outlive the metadata that made it
+// findable (an orphaned object in the bucket is invisible but still real
+// patient data sitting there).
+func (c *R2Client) DeleteObject(ctx context.Context, fileKey string) error {
+	_, err := c.s3.DeleteObject(ctx, &s3.DeleteObjectInput{
+		Bucket: aws.String(c.bucket),
+		Key:    aws.String(fileKey),
+	})
+	if err != nil {
+		return fmt.Errorf("storage: deleting %q: %w", fileKey, err)
+	}
+	return nil
+}

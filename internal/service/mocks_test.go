@@ -211,3 +211,39 @@ func (f *fakeDocumentTemplateRepo) Update(ctx context.Context, tenantID uuid.UUI
 func (f *fakeDocumentTemplateRepo) ListByTenant(ctx context.Context, tenantID uuid.UUID) ([]models.DocumentTemplate, error) {
 	return f.listByTenantFn(ctx, tenantID)
 }
+
+type fakePatientDocumentRepo struct {
+	createFn        func(ctx context.Context, tenantID uuid.UUID, d *models.PatientDocument) error
+	findFn          func(ctx context.Context, tenantID, id uuid.UUID) (*models.PatientDocument, error)
+	listByPatientFn func(ctx context.Context, tenantID, patientID uuid.UUID) ([]models.PatientDocument, error)
+	deleteFn        func(ctx context.Context, tenantID, id uuid.UUID) error
+}
+
+func (f *fakePatientDocumentRepo) Create(ctx context.Context, tenantID uuid.UUID, d *models.PatientDocument) error {
+	return f.createFn(ctx, tenantID, d)
+}
+func (f *fakePatientDocumentRepo) FindByID(ctx context.Context, tenantID, id uuid.UUID) (*models.PatientDocument, error) {
+	return f.findFn(ctx, tenantID, id)
+}
+func (f *fakePatientDocumentRepo) ListByPatient(ctx context.Context, tenantID, patientID uuid.UUID) ([]models.PatientDocument, error) {
+	return f.listByPatientFn(ctx, tenantID, patientID)
+}
+func (f *fakePatientDocumentRepo) Delete(ctx context.Context, tenantID, id uuid.UUID) error {
+	return f.deleteFn(ctx, tenantID, id)
+}
+
+type fakeObjectStorage struct {
+	presignUploadFn   func(ctx context.Context, fileKey, contentType string, expiresIn time.Duration) (string, error)
+	presignDownloadFn func(ctx context.Context, fileKey string, expiresIn time.Duration) (string, error)
+	deleteObjectFn    func(ctx context.Context, fileKey string) error
+}
+
+func (f *fakeObjectStorage) PresignUpload(ctx context.Context, fileKey, contentType string, expiresIn time.Duration) (string, error) {
+	return f.presignUploadFn(ctx, fileKey, contentType, expiresIn)
+}
+func (f *fakeObjectStorage) PresignDownload(ctx context.Context, fileKey string, expiresIn time.Duration) (string, error) {
+	return f.presignDownloadFn(ctx, fileKey, expiresIn)
+}
+func (f *fakeObjectStorage) DeleteObject(ctx context.Context, fileKey string) error {
+	return f.deleteObjectFn(ctx, fileKey)
+}

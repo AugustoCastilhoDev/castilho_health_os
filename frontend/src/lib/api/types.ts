@@ -121,3 +121,16 @@ export interface DocumentTemplateDTO {
   content: string
   is_active: boolean
 }
+
+export interface PatientDocumentDTO {
+  id: string
+  tenant_id: string
+  created_at: string
+  patient_id: string
+  uploaded_by_id: string
+  file_key: string
+  file_name: string
+  file_size: number
+  mime_type: string
+  description?: string
+}

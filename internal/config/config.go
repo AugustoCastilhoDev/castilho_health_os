@@ -23,6 +23,16 @@ type Config struct {
 	JWTTTL    time.Duration
 
 	CORSAllowedOrigins string
+
+	// R2* are deliberately optional — left empty, main.go skips wiring the
+	// R2 client and PatientDocument upload/download degrades to a clear
+	// "not configured" error instead of failing app startup. This keeps
+	// environments without a real Cloudflare account (CI, a fresh clone)
+	// working for everything except document upload.
+	R2AccountID       string
+	R2AccessKeyID     string
+	R2SecretAccessKey string
+	R2BucketName      string
 }
 
 // Load reads a .env file if one is present (local dev running outside
@@ -49,6 +59,11 @@ func Load() (*Config, error) {
 		JWTTTL:     jwtTTL,
 
 		CORSAllowedOrigins: getEnv("CORS_ALLOWED_ORIGINS", "http://localhost:5173"),
+
+		R2AccountID:       os.Getenv("R2_ACCOUNT_ID"),
+		R2AccessKeyID:     os.Getenv("R2_ACCESS_KEY_ID"),
+		R2SecretAccessKey: os.Getenv("R2_SECRET_ACCESS_KEY"),
+		R2BucketName:      os.Getenv("R2_BUCKET_NAME"),
 	}
 
 	if cfg.DBUser == "" || cfg.DBPassword == "" || cfg.DBName == "" {
@@ -59,6 +74,13 @@ func Load() (*Config, error) {
 	}
 
 	return cfg, nil
+}
+
+// IsR2Configured reports whether all four R2 values are present. Partial
+// configuration (e.g. an account ID but no bucket) is treated the same as
+// none at all — main.go shouldn't try to guess which combination is a typo.
+func (c *Config) IsR2Configured() bool {
+	return c.R2AccountID != "" && c.R2AccessKeyID != "" && c.R2SecretAccessKey != "" && c.R2BucketName != ""
 }
 
 // DSN builds the Postgres connection string GORM expects.

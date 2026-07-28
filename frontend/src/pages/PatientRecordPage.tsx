@@ -4,6 +4,7 @@ import { Cake, FileOutput, IdCard, Mail, Pencil, Phone, Plus } from 'lucide-reac
 import { PatientTimeline, type TimelineEntry } from '../components/prontuario/PatientTimeline'
 import { MedicalRecordFormModal } from '../components/prontuario/MedicalRecordFormModal'
 import { GenerateDocumentModal } from '../components/prontuario/GenerateDocumentModal'
+import { PatientDocumentsPanel } from '../components/prontuario/PatientDocumentsPanel'
 import { calculateAge, initials } from '../lib/format'
 import { useAuth } from '../lib/auth/AuthContext'
 import { ApiError } from '../lib/api/client'
@@ -189,6 +190,8 @@ export function PatientRecordPage() {
             )}
           </div>
         </div>
+
+        <PatientDocumentsPanel patientId={patient.id} />
 
         <div>
           <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-brand-text-muted">

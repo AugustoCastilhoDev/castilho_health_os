@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 
 	"github.com/gofiber/fiber/v2"
@@ -14,6 +15,7 @@ import (
 	"github.com/castilho/health-os/internal/infra/db"
 	"github.com/castilho/health-os/internal/repository"
 	"github.com/castilho/health-os/internal/service"
+	"github.com/castilho/health-os/internal/storage"
 )
 
 func main() {
@@ -37,10 +39,32 @@ func main() {
 	txRepo := repository.NewFinancialTransactionRepository(gdb)
 	medicalRecordRepo := repository.NewMedicalRecordRepository(gdb)
 	documentTemplateRepo := repository.NewDocumentTemplateRepository(gdb)
+	patientDocumentRepo := repository.NewPatientDocumentRepository(gdb)
 
 	settlementService := service.NewSettlementService(appointmentRepo, ruleRepo, txRepo)
 	patientService := service.NewPatientService(patientRepo)
 	userService := service.NewUserService(userRepo)
+
+	// R2 is optional (see Config.IsR2Configured) — leaving objectStorage as
+	// a true nil interface (never assigned a typed-nil *storage.R2Client)
+	// when unconfigured is what lets PatientDocumentService's `== nil`
+	// check work correctly.
+	var objectStorage service.ObjectStorage
+	if cfg.IsR2Configured() {
+		r2Client, err := storage.NewR2Client(context.Background(), storage.R2Config{
+			AccountID:       cfg.R2AccountID,
+			AccessKeyID:     cfg.R2AccessKeyID,
+			SecretAccessKey: cfg.R2SecretAccessKey,
+			Bucket:          cfg.R2BucketName,
+		})
+		if err != nil {
+			log.Fatalf("storage: %v", err)
+		}
+		objectStorage = r2Client
+		log.Println("R2 object storage configured — document upload/download enabled")
+	} else {
+		log.Println("R2 not configured (R2_* env vars unset) — document upload/download disabled")
+	}
 
 	h := &api.Handlers{
 		Auth:             handlers.NewAuthHandler(service.NewAuthService(tenantRepo, userRepo, issuer)),
@@ -51,6 +75,7 @@ func main() {
 		Financial:        handlers.NewFinancialHandler(service.NewFinancialService(ruleRepo, txRepo), settlementService),
 		MedicalRecord:    handlers.NewMedicalRecordHandler(service.NewMedicalRecordService(medicalRecordRepo)),
 		DocumentTemplate: handlers.NewDocumentTemplateHandler(service.NewDocumentTemplateService(documentTemplateRepo), patientService, userService),
+		PatientDocument:  handlers.NewPatientDocumentHandler(service.NewPatientDocumentService(patientDocumentRepo, objectStorage)),
 	}
 
 	app := fiber.New()

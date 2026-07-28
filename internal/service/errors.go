@@ -9,3 +9,8 @@ var ErrValidation = errors.New("service: validation failed")
 // ErrConflict flags a well-formed request that clashes with existing state
 // (e.g. a tenant slug already taken). Handlers map it to 409.
 var ErrConflict = errors.New("service: conflict")
+
+// ErrStorageNotConfigured is returned by PatientDocumentService when no R2
+// credentials were supplied at startup. Handlers map it to 503 — the
+// request itself is fine, the deployment just isn't ready for it yet.
+var ErrStorageNotConfigured = errors.New("service: document storage is not configured")
