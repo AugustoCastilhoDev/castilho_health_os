@@ -1,10 +1,14 @@
 import { useEffect, useState } from 'react'
+import { Plus } from 'lucide-react'
 import { useAuth } from '../../lib/auth/AuthContext'
 import { ApiError } from '../../lib/api/client'
 import { formatCurrencyBRL } from '../../lib/format'
 import { FEE_DEDUCTION_LABEL, FINANCIAL_RULE_TYPE_LABEL, type FeeDeductionPolicy, type FinancialRuleType } from '../../lib/financial'
 import type { FinancialRuleDTO, UserDTO } from '../../lib/api/types'
 import { useProfessionalScope } from '../../hooks/useProfessionalScope'
+import { RuleFormModal } from './RuleFormModal'
+
+const CAN_MANAGE_RULES_ROLES = new Set(['TENANT_ADMIN', 'FINANCE'])
 
 function ruleAmount(rule: FinancialRuleDTO): string {
   if (rule.type === 'PERCENTAGE' && rule.percentage != null) {
@@ -17,11 +21,15 @@ function ruleAmount(rule: FinancialRuleDTO): string {
 }
 
 export function FinancialRulesPanel() {
-  const { apiFetch } = useAuth()
+  const { apiFetch, user } = useAuth()
   const { professionals, professionalId, setProfessionalId, loading: loadingProfessionals } = useProfessionalScope()
   const [rules, setRules] = useState<FinancialRuleDTO[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [reloadTick, setReloadTick] = useState(0)
+  const [editingRule, setEditingRule] = useState<FinancialRuleDTO | 'new' | null>(null)
+
+  const canManageRules = user ? CAN_MANAGE_RULES_ROLES.has(user.role) : false
 
   useEffect(() => {
     if (!professionalId) return
@@ -40,26 +48,53 @@ export function FinancialRulesPanel() {
     return () => {
       cancelled = true
     }
-  }, [professionalId, apiFetch])
+  }, [professionalId, apiFetch, reloadTick])
+
+  async function toggleActive(rule: FinancialRuleDTO) {
+    setError(null)
+    try {
+      await apiFetch<FinancialRuleDTO>(`/api/financial-rules/${rule.id}`, {
+        method: 'PUT',
+        body: JSON.stringify({ ...rule, is_active: !rule.is_active }),
+      })
+      setReloadTick((t) => t + 1)
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Não foi possível atualizar a regra.')
+    }
+  }
 
   return (
     <div>
-      {professionals.length > 1 && (
-        <div className="mb-4 max-w-xs">
-          <label className="mb-1 block text-sm font-medium text-brand-text">Profissional</label>
-          <select
-            value={professionalId ?? ''}
-            onChange={(e) => setProfessionalId(e.target.value)}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-action focus:outline-none focus:ring-1 focus:ring-brand-action"
+      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+        {professionals.length > 1 ? (
+          <div className="max-w-xs">
+            <label className="mb-1 block text-sm font-medium text-brand-text">Profissional</label>
+            <select
+              value={professionalId ?? ''}
+              onChange={(e) => setProfessionalId(e.target.value)}
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-action focus:outline-none focus:ring-1 focus:ring-brand-action"
+            >
+              {professionals.map((p: UserDTO) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : (
+          <div />
+        )}
+        {canManageRules && professionalId && (
+          <button
+            type="button"
+            onClick={() => setEditingRule('new')}
+            className="flex items-center gap-2 rounded-lg bg-brand-action px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand-action-hover"
           >
-            {professionals.map((p: UserDTO) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
+            <Plus size={18} />
+            Nova Regra
+          </button>
+        )}
+      </div>
 
       {error && (
         <p className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-brand-alert-text">
@@ -83,6 +118,7 @@ export function FinancialRulesPanel() {
                 <th className="px-6 py-3 font-medium">Dedução de taxa</th>
                 <th className="px-6 py-3 font-medium">Prioridade</th>
                 <th className="px-6 py-3 font-medium">Situação</th>
+                {canManageRules && <th className="px-6 py-3 font-medium" />}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -111,12 +147,44 @@ export function FinancialRulesPanel() {
                       {rule.is_active ? 'Ativa' : 'Inativa'}
                     </span>
                   </td>
+                  {canManageRules && (
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setEditingRule(rule)}
+                          className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-brand-text hover:bg-slate-50"
+                        >
+                          Editar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => toggleActive(rule)}
+                          className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-brand-text hover:bg-slate-50"
+                        >
+                          {rule.is_active ? 'Desativar' : 'Ativar'}
+                        </button>
+                      </div>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
           </table>
         )}
       </div>
+
+      {editingRule && professionalId && (
+        <RuleFormModal
+          professionalId={professionalId}
+          existingRule={editingRule === 'new' ? undefined : editingRule}
+          onClose={() => setEditingRule(null)}
+          onSaved={() => {
+            setEditingRule(null)
+            setReloadTick((t) => t + 1)
+          }}
+        />
+      )}
     </div>
   )
 }

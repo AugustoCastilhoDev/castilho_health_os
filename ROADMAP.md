@@ -1,7 +1,7 @@
 # Castilho Health OS — Roadmap
 
 Repo: https://github.com/AugustoCastilhoDev/castilho_health_os
-Última atualização: 2026-07-28 (tela de Financeiro implementada)
+Última atualização: 2026-07-28 (tela de Financeiro implementada, incl. CRUD de regras de repasse)
 
 ## Stack
 
@@ -31,8 +31,9 @@ Nginx + Certbot prontos para a VPS, ainda não deployados (deploy fica por últi
 - **Lacunas conhecidas da integração**: não existe endpoint "todos os agendamentos de hoje da clínica" (só por profissional) — resolvido no frontend com um seletor de profissional (`useProfessionalScope`) quando o usuário logado não é `DOCTOR`/`DENTIST`. Não existe endpoint de faturamento agregado — o Dashboard soma as transações de cada agendamento individualmente (aceitável na escala atual).
 - **Financeiro** (`src/pages/FinancialPage.tsx`): duas abas.
   - **Lançamentos**: lista paginada de `FinancialTransaction` (recebimentos e repasses) com filtro por situação/tipo, botão "Registrar Pagamento" (cria `PATIENT_PAYMENT` via busca de paciente + valor + forma de pagamento + convênio opcional) e "Marcar como pago" por linha (só aparece para quem já é `TENANT_ADMIN`/`FINANCE` — o backend também restringe via `finance` middleware). Dois cards de resumo (A Receber / A Repassar pendentes) somam até 100 linhas pendentes de cada tipo — mesmo tipo de limitação aceita do Dashboard, não há endpoint de soma agregada.
-  - **Regras de Repasse**: somente leitura por enquanto — seletor de profissional (reaproveita `useProfessionalScope`) + tabela de `FinancialRule` (tipo, valor, escopo, dedução de taxa, prioridade, situação). Criação/edição de regra ainda não tem tela (só via API/Postman).
+  - **Regras de Repasse**: seletor de profissional (reaproveita `useProfessionalScope`) + tabela de `FinancialRule` com CRUD completo pela tela — "Nova Regra" e "Editar" (`RuleFormModal.tsx`: tipo percentual/fixo, escopo procedimento/convênio, dedução de taxa, prioridade) e "Ativar/Desativar" por linha (visível só para `TENANT_ADMIN`/`FINANCE`, backend restringe via `finance` middleware).
   - Backend ganhou `GET /api/financial-transactions` (novo — antes só existia por agendamento): `FinancialTransactionRepository.ListByTenant` com filtro por `Type`/`Status` + paginação (`FinancialService.ListTransactions` default 20/máx 100 por página), coberto por teste de repositório.
+  - Backend ganhou `PUT /api/financial-rules/:id` (novo — o service já tinha `UpdateRule`, mas sem handler/rota): validação (`validateRule`, compartilhada com `CreateRule`) e semântica PUT de substituição completa — `is_active` omitido é zerado, então o frontend sempre envia a regra inteira.
 - **Estoque**: ainda não tem tela — aparece na sidebar marcado "em breve".
 
 ### Infra
@@ -85,11 +86,11 @@ Pedido em 2026-07-27: gestão de Documentos, Receitas e Evolução Clínica. Tr�
 
 ## Próximos passos (recomendação de ordem — decidir na volta)
 
-Avaliado em 2026-07-27, concluído em 2026-07-28: a prioridade era **Financeiro (tela) antes de PEP/Documentos completo** — feito. Próxima decisão em aberto: PEP/Documentos completo vs. CRUD de regras de repasse (hoje só leitura) vs. Odontograma.
+Avaliado em 2026-07-27, concluído em 2026-07-28: a prioridade era **Financeiro (tela) antes de PEP/Documentos completo** — feito, incluindo o CRUD de regras que tinha ficado pendente. Próxima decisão em aberto entre PEP/Documentos completo (maior frente, com dependências externas) e Odontograma (módulo novo do zero, sem bloqueio externo).
 
 1. ~~Settlement financeiro automático~~ — feito.
 2. ~~Frontend (Dashboard, Agenda, Pacientes)~~ — feito.
-3. ~~Tela de Financeiro~~ — feito (2026-07-28): lançamentos (listar/filtrar/paginar, registrar pagamento, marcar como pago) + regras de repasse (visualização). CRUD de regras (criar/editar pela tela) ainda não existe — hoje só a API permite.
+3. ~~Tela de Financeiro~~ — feito (2026-07-28): lançamentos (listar/filtrar/paginar, registrar pagamento, marcar como pago) + regras de repasse (CRUD completo: criar, editar, ativar/desativar).
 4. **PEP completo** — migrations + repos/services/handlers para os 4 modelos novos, upload/download via R2, editor rich-text, geração de PDF local, integração Memed. Arquitetura já definida (ver seção acima); maior de todas as frentes.
 5. **Odontograma interativo** — módulo exclusivo odonto.
 6. **Integração WhatsApp** — confirmação automática 24h antes, processando resposta do paciente.

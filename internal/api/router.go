@@ -85,6 +85,7 @@ func RegisterRoutes(app *fiber.App, h *Handlers, issuer *auth.JWTIssuer, healthC
 	rules.Post("/", finance, h.Financial.CreateRule)
 	rules.Get("/", h.Financial.ListRulesByProfessional)
 	rules.Get("/:id", h.Financial.GetRule)
+	rules.Put("/:id", finance, h.Financial.UpdateRule)
 
 	// CreateTransaction itself is open to any authenticated role because a
 	// PATIENT_PAYMENT is normal front-desk work; the PROFESSIONAL_PAYOUT

@@ -20,7 +20,11 @@ func NewFinancialService(rules repository.FinancialRuleRepository, transactions 
 	return &FinancialService{rules: rules, transactions: transactions}
 }
 
-func (s *FinancialService) CreateRule(ctx context.Context, tenantID uuid.UUID, rule *models.FinancialRule) error {
+// validateRule enforces the invariants both CreateRule and UpdateRule need:
+// a rule's Percentage/FixedAmountCents must actually match its Type, since
+// the settlement service trusts whichever field its Type says to read
+// (see calculatePayoutCents) without re-checking the other is empty.
+func validateRule(rule *models.FinancialRule) error {
 	if rule.ProfessionalID == uuid.Nil {
 		return fmt.Errorf("%w: professional_id is required", ErrValidation)
 	}
@@ -36,6 +40,13 @@ func (s *FinancialService) CreateRule(ctx context.Context, tenantID uuid.UUID, r
 	default:
 		return fmt.Errorf("%w: unknown rule type %q", ErrValidation, rule.Type)
 	}
+	return nil
+}
+
+func (s *FinancialService) CreateRule(ctx context.Context, tenantID uuid.UUID, rule *models.FinancialRule) error {
+	if err := validateRule(rule); err != nil {
+		return err
+	}
 	if rule.FeeDeduction == "" {
 		rule.FeeDeduction = models.DeductFeesBeforeSplit
 	}
@@ -47,7 +58,16 @@ func (s *FinancialService) GetRule(ctx context.Context, tenantID, id uuid.UUID) 
 	return s.rules.FindByID(ctx, tenantID, id)
 }
 
+// UpdateRule is a full replace, same PUT convention as the rest of the API
+// — a field the caller omits (e.g. is_active) gets zeroed, so the frontend
+// must always send the complete rule, not a partial patch.
 func (s *FinancialService) UpdateRule(ctx context.Context, tenantID uuid.UUID, rule *models.FinancialRule) error {
+	if err := validateRule(rule); err != nil {
+		return err
+	}
+	if rule.FeeDeduction == "" {
+		rule.FeeDeduction = models.DeductFeesBeforeSplit
+	}
 	return s.rules.Update(ctx, tenantID, rule)
 }
 

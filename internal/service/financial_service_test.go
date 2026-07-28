@@ -36,6 +36,51 @@ func TestFinancialService_CreateRule_Validation(t *testing.T) {
 	}
 }
 
+func TestFinancialService_UpdateRule_Validation(t *testing.T) {
+	badPct := 1.5
+	cases := []struct {
+		name string
+		rule *models.FinancialRule
+	}{
+		{"missing professional_id", &models.FinancialRule{Type: models.RuleTypePercentage}},
+		{"percentage out of range", &models.FinancialRule{ProfessionalID: uuid.New(), Type: models.RuleTypePercentage, Percentage: &badPct}},
+		{"fixed amount missing", &models.FinancialRule{ProfessionalID: uuid.New(), Type: models.RuleTypeFixedPerAppointment}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			repo := &fakeFinancialRuleRepo{}
+			svc := service.NewFinancialService(repo, &fakeFinancialTransactionRepo{})
+			err := svc.UpdateRule(context.Background(), uuid.New(), tc.rule)
+			require.ErrorIs(t, err, service.ErrValidation)
+		})
+	}
+}
+
+// Regression guard for the PUT-is-a-full-replace convention: UpdateRule must
+// forward whatever IsActive the caller sent (including false) straight to
+// the repository, never silently re-activating a rule the user just
+// deactivated.
+func TestFinancialService_UpdateRule_PassesThroughIsActive(t *testing.T) {
+	pct := 0.5
+	var saved *models.FinancialRule
+	repo := &fakeFinancialRuleRepo{
+		updateFn: func(ctx context.Context, tenantID uuid.UUID, r *models.FinancialRule) error {
+			saved = r
+			return nil
+		},
+	}
+	svc := service.NewFinancialService(repo, &fakeFinancialTransactionRepo{})
+
+	rule := &models.FinancialRule{
+		ProfessionalID: uuid.New(),
+		Type:           models.RuleTypePercentage,
+		Percentage:     &pct,
+		IsActive:       false,
+	}
+	require.NoError(t, svc.UpdateRule(context.Background(), uuid.New(), rule))
+	assert.False(t, saved.IsActive)
+}
+
 func TestFinancialService_CreateTransaction_PayoutRestrictedToAdminOrFinance(t *testing.T) {
 	cases := []struct {
 		role      models.UserRole

@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { Modal } from '../common/Modal'
 import { useAuth } from '../../lib/auth/AuthContext'
 import { ApiError } from '../../lib/api/client'
+import { parseCurrencyToCents } from '../../lib/format'
 import { PAYMENT_METHOD_LABEL, type PaymentMethod } from '../../lib/financial'
 import type { FinancialTransactionDTO, PatientDTO, UserDTO } from '../../lib/api/types'
 
@@ -9,15 +10,6 @@ interface RegisterPaymentModalProps {
   professionals: UserDTO[]
   onClose: () => void
   onCreated: (tx: FinancialTransactionDTO) => void
-}
-
-// Accepts "150", "150,00" or "150.00" and returns the amount in cents —
-// money is always int64 cents past this boundary, never a float.
-function parseAmountToCents(raw: string): number | null {
-  const normalized = raw.trim().replace(/\./g, '').replace(',', '.')
-  const value = Number(normalized)
-  if (!Number.isFinite(value) || value <= 0) return null
-  return Math.round(value * 100)
 }
 
 export function RegisterPaymentModal({ professionals, onClose, onCreated }: RegisterPaymentModalProps) {
@@ -61,7 +53,7 @@ export function RegisterPaymentModal({ professionals, onClose, onCreated }: Regi
       setError('Selecione um paciente.')
       return
     }
-    const grossAmountCents = parseAmountToCents(amount)
+    const grossAmountCents = parseCurrencyToCents(amount)
     if (grossAmountCents === null) {
       setError('Informe um valor válido.')
       return

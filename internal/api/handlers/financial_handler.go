@@ -31,6 +31,9 @@ type financialRuleRequest struct {
 	InsurancePlan    *string   `json:"insurance_plan"`
 	FeeDeduction     string    `json:"fee_deduction"`
 	Priority         int       `json:"priority"`
+	// IsActive is ignored by CreateRule (a new rule always starts active)
+	// and only takes effect on UpdateRule, which is a full replace.
+	IsActive bool `json:"is_active"`
 }
 
 func (r financialRuleRequest) toModel() *models.FinancialRule {
@@ -43,6 +46,7 @@ func (r financialRuleRequest) toModel() *models.FinancialRule {
 		InsurancePlan:    r.InsurancePlan,
 		FeeDeduction:     models.FeeDeductionPolicy(r.FeeDeduction),
 		Priority:         r.Priority,
+		IsActive:         r.IsActive,
 	}
 }
 
@@ -65,6 +69,23 @@ func (h *FinancialHandler) GetRule(c *fiber.Ctx) error {
 	}
 	rule, err := h.financial.GetRule(c.Context(), appmiddleware.TenantID(c), id)
 	if err != nil {
+		return respondErr(c, err)
+	}
+	return c.JSON(rule)
+}
+
+func (h *FinancialHandler) UpdateRule(c *fiber.Ctx) error {
+	id, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid id"})
+	}
+	var req financialRuleRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid request body"})
+	}
+	rule := req.toModel()
+	rule.ID = id
+	if err := h.financial.UpdateRule(c.Context(), appmiddleware.TenantID(c), rule); err != nil {
 		return respondErr(c, err)
 	}
 	return c.JSON(rule)

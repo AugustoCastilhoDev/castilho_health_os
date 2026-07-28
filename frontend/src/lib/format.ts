@@ -88,6 +88,15 @@ export function calculateAge(birthDate: Date, at: Date = new Date()): number {
   return age
 }
 
+// Accepts "150", "150,00" or "150.00" and returns the amount in cents —
+// money is always int64 cents past this boundary, never a float.
+export function parseCurrencyToCents(raw: string): number | null {
+  const normalized = raw.trim().replace(/\./g, '').replace(',', '.')
+  const value = Number(normalized)
+  if (!Number.isFinite(value) || value <= 0) return null
+  return Math.round(value * 100)
+}
+
 export function initials(name: string): string {
   return name
     .split(' ')
