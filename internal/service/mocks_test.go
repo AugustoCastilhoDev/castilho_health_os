@@ -8,6 +8,7 @@ import (
 
 	"github.com/castilho/health-os/internal/domain/models"
 	"github.com/castilho/health-os/internal/repository"
+	"github.com/castilho/health-os/internal/service"
 )
 
 // Hand-rolled function-field fakes for the repository interfaces — no
@@ -230,6 +231,34 @@ func (f *fakePatientDocumentRepo) ListByPatient(ctx context.Context, tenantID, p
 }
 func (f *fakePatientDocumentRepo) Delete(ctx context.Context, tenantID, id uuid.UUID) error {
 	return f.deleteFn(ctx, tenantID, id)
+}
+
+type fakeMemedPrescriptionLogRepo struct {
+	createFn          func(ctx context.Context, tenantID uuid.UUID, l *models.MemedPrescriptionLog) error
+	findByMemedIDFn   func(ctx context.Context, tenantID uuid.UUID, memedPrescriptionID string) (*models.MemedPrescriptionLog, error)
+	listByPatientFn   func(ctx context.Context, tenantID, patientID uuid.UUID) ([]models.MemedPrescriptionLog, error)
+	cancelByMemedIDFn func(ctx context.Context, tenantID uuid.UUID, memedPrescriptionID string) error
+}
+
+func (f *fakeMemedPrescriptionLogRepo) Create(ctx context.Context, tenantID uuid.UUID, l *models.MemedPrescriptionLog) error {
+	return f.createFn(ctx, tenantID, l)
+}
+func (f *fakeMemedPrescriptionLogRepo) FindByMemedID(ctx context.Context, tenantID uuid.UUID, memedPrescriptionID string) (*models.MemedPrescriptionLog, error) {
+	return f.findByMemedIDFn(ctx, tenantID, memedPrescriptionID)
+}
+func (f *fakeMemedPrescriptionLogRepo) ListByPatient(ctx context.Context, tenantID, patientID uuid.UUID) ([]models.MemedPrescriptionLog, error) {
+	return f.listByPatientFn(ctx, tenantID, patientID)
+}
+func (f *fakeMemedPrescriptionLogRepo) CancelByMemedID(ctx context.Context, tenantID uuid.UUID, memedPrescriptionID string) error {
+	return f.cancelByMemedIDFn(ctx, tenantID, memedPrescriptionID)
+}
+
+type fakeMemedClient struct {
+	fetchOrRegisterTokenFn func(ctx context.Context, p service.MemedPrescriber) (string, error)
+}
+
+func (f *fakeMemedClient) FetchOrRegisterToken(ctx context.Context, p service.MemedPrescriber) (string, error) {
+	return f.fetchOrRegisterTokenFn(ctx, p)
 }
 
 type fakeObjectStorage struct {

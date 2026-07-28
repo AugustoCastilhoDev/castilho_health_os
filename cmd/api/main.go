@@ -13,10 +13,35 @@ import (
 	"github.com/castilho/health-os/internal/auth"
 	"github.com/castilho/health-os/internal/config"
 	"github.com/castilho/health-os/internal/infra/db"
+	"github.com/castilho/health-os/internal/memed"
 	"github.com/castilho/health-os/internal/repository"
 	"github.com/castilho/health-os/internal/service"
 	"github.com/castilho/health-os/internal/storage"
 )
+
+// memedClientAdapter bridges *memed.Client to service.MemedClient — the two
+// packages deliberately declare their own Prescriber struct (see
+// MemedClient's doc comment in internal/service/memed_service.go), so this
+// small conversion is the only place that needs to know both shapes.
+type memedClientAdapter struct {
+	c *memed.Client
+}
+
+func (a memedClientAdapter) FetchOrRegisterToken(ctx context.Context, p service.MemedPrescriber) (string, error) {
+	return a.c.FetchOrRegisterToken(ctx, memed.Prescriber{
+		ExternalID:  p.ExternalID,
+		Name:        p.Name,
+		Surname:     p.Surname,
+		CPF:         p.CPF,
+		BoardCode:   p.BoardCode,
+		BoardNumber: p.BoardNumber,
+		BoardState:  p.BoardState,
+		BirthDate:   p.BirthDate,
+		Email:       p.Email,
+		Phone:       p.Phone,
+		Sex:         p.Sex,
+	})
+}
 
 func main() {
 	cfg, err := config.Load()
@@ -40,6 +65,7 @@ func main() {
 	medicalRecordRepo := repository.NewMedicalRecordRepository(gdb)
 	documentTemplateRepo := repository.NewDocumentTemplateRepository(gdb)
 	patientDocumentRepo := repository.NewPatientDocumentRepository(gdb)
+	memedLogRepo := repository.NewMemedPrescriptionLogRepository(gdb)
 
 	settlementService := service.NewSettlementService(appointmentRepo, ruleRepo, txRepo)
 	patientService := service.NewPatientService(patientRepo)
@@ -66,6 +92,21 @@ func main() {
 		log.Println("R2 not configured (R2_* env vars unset) — document upload/download disabled")
 	}
 
+	// Same optional-config pattern as R2 above: a true nil interface until
+	// MEMED_API_KEY/MEMED_SECRET_KEY are both set, so MemedService's
+	// `== nil` check works and the app still starts without them.
+	var memedClient service.MemedClient
+	if cfg.IsMemedConfigured() {
+		memedClient = memedClientAdapter{memed.NewClient(memed.Config{
+			APIKey:    cfg.MemedAPIKey,
+			SecretKey: cfg.MemedSecretKey,
+			BaseURL:   cfg.MemedAPIURL,
+		})}
+		log.Println("Memed configured — prescription issuance enabled")
+	} else {
+		log.Println("Memed not configured (MEMED_API_KEY/MEMED_SECRET_KEY unset) — prescription issuance disabled")
+	}
+
 	h := &api.Handlers{
 		Auth:             handlers.NewAuthHandler(service.NewAuthService(tenantRepo, userRepo, issuer)),
 		Tenant:           handlers.NewTenantHandler(service.NewTenantService(gdb, tenantRepo)),
@@ -76,6 +117,7 @@ func main() {
 		MedicalRecord:    handlers.NewMedicalRecordHandler(service.NewMedicalRecordService(medicalRecordRepo)),
 		DocumentTemplate: handlers.NewDocumentTemplateHandler(service.NewDocumentTemplateService(documentTemplateRepo), patientService, userService),
 		PatientDocument:  handlers.NewPatientDocumentHandler(service.NewPatientDocumentService(patientDocumentRepo, objectStorage)),
+		Memed:            handlers.NewMemedHandler(service.NewMemedService(memedLogRepo, userRepo, memedClient), cfg.MemedFrontendScriptURL),
 	}
 
 	app := fiber.New()

@@ -14,3 +14,8 @@ var ErrConflict = errors.New("service: conflict")
 // credentials were supplied at startup. Handlers map it to 503 — the
 // request itself is fine, the deployment just isn't ready for it yet.
 var ErrStorageNotConfigured = errors.New("service: document storage is not configured")
+
+// ErrMemedNotConfigured is returned by MemedService.GetPrescriberToken when
+// no MEMED_API_KEY/MEMED_SECRET_KEY were supplied at startup. Handlers map
+// it to 503, same reasoning as ErrStorageNotConfigured.
+var ErrMemedNotConfigured = errors.New("service: memed integration is not configured")

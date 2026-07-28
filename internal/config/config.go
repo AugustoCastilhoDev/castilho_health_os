@@ -33,6 +33,21 @@ type Config struct {
 	R2AccessKeyID     string
 	R2SecretAccessKey string
 	R2BucketName      string
+
+	// Memed* are optional the same way — Memed publishes a shared sandbox
+	// key pair in its own public docs, so these can be set to that pair to
+	// exercise the whole integration before a commercial/production key
+	// pair is issued (see ROADMAP.md). Left empty, prescription issuance
+	// degrades to a clear "not configured" error instead of failing
+	// startup.
+	MemedAPIKey    string
+	MemedSecretKey string
+	MemedAPIURL    string
+	// MemedFrontendScriptURL is not a secret — it's the public URL the
+	// browser loads Memed's widget script from — but it's kept here so
+	// sandbox vs. production can be swapped via env var alone, without a
+	// frontend code change.
+	MemedFrontendScriptURL string
 }
 
 // Load reads a .env file if one is present (local dev running outside
@@ -64,6 +79,14 @@ func Load() (*Config, error) {
 		R2AccessKeyID:     os.Getenv("R2_ACCESS_KEY_ID"),
 		R2SecretAccessKey: os.Getenv("R2_SECRET_ACCESS_KEY"),
 		R2BucketName:      os.Getenv("R2_BUCKET_NAME"),
+
+		MemedAPIKey:    os.Getenv("MEMED_API_KEY"),
+		MemedSecretKey: os.Getenv("MEMED_SECRET_KEY"),
+		MemedAPIURL:    getEnv("MEMED_API_URL", "https://integrations.api.memed.com.br/v1"),
+		MemedFrontendScriptURL: getEnv(
+			"MEMED_FRONTEND_SCRIPT_URL",
+			"https://integrations.memed.com.br/modulos/plataforma.sinapse-prescricao/build/sinapse-prescricao.min.js",
+		),
 	}
 
 	if cfg.DBUser == "" || cfg.DBPassword == "" || cfg.DBName == "" {
@@ -81,6 +104,13 @@ func Load() (*Config, error) {
 // none at all — main.go shouldn't try to guess which combination is a typo.
 func (c *Config) IsR2Configured() bool {
 	return c.R2AccountID != "" && c.R2AccessKeyID != "" && c.R2SecretAccessKey != "" && c.R2BucketName != ""
+}
+
+// IsMemedConfigured reports whether both key values are present. The URL
+// fields always have defaults (the public sandbox), so they don't factor
+// into this check.
+func (c *Config) IsMemedConfigured() bool {
+	return c.MemedAPIKey != "" && c.MemedSecretKey != ""
 }
 
 // DSN builds the Postgres connection string GORM expects.

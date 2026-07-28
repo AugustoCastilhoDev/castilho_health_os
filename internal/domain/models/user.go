@@ -1,5 +1,17 @@
 package models
 
+import "time"
+
+// UserSex is deliberately just M/F, not a broader enum — the only consumer
+// is Memed's prescriber-registration API, which only accepts those two
+// values for the (optional) sexo field.
+type UserSex string
+
+const (
+	UserSexMale   UserSex = "M"
+	UserSexFemale UserSex = "F"
+)
+
 // UserRole is the coarse-grained RBAC role. Fine-grained permission
 // overrides (if a clinic ever needs them) belong in a separate
 // role_permissions table added when that need actually shows up — a fixed
@@ -39,6 +51,15 @@ type User struct {
 	CouncilType   *string `gorm:"type:varchar(10)" json:"council_type,omitempty"` // "CRM" | "CRO"
 	CouncilNumber *string `gorm:"type:varchar(20)" json:"council_number,omitempty"`
 	CouncilState  *string `gorm:"type:varchar(2)" json:"council_state,omitempty"`
+
+	// CPF and BirthDate are mandatory fields on Memed's prescriber
+	// registration API; Phone/Sex are optional there. All nil until an
+	// admin fills them in for a DOCTOR/DENTIST who will issue prescriptions
+	// — nothing else in the app reads these yet.
+	CPF       *string    `gorm:"type:varchar(11)" json:"cpf,omitempty"`
+	BirthDate *time.Time `json:"birth_date,omitempty"`
+	Sex       *UserSex   `gorm:"type:varchar(1)" json:"sex,omitempty"`
+	Phone     *string    `gorm:"type:varchar(20)" json:"phone,omitempty"`
 
 	FinancialRules []FinancialRule `gorm:"foreignKey:ProfessionalID" json:"-"`
 }

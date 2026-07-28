@@ -134,3 +134,13 @@ export interface PatientDocumentDTO {
   mime_type: string
   description?: string
 }
+
+export interface MemedPrescriptionLogDTO {
+  id: string
+  tenant_id: string
+  patient_id: string
+  professional_id: string
+  memed_prescription_id: string
+  status: 'ISSUED' | 'CANCELLED'
+  issued_at: string
+}

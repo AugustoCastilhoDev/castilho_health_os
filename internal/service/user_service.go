@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -37,6 +38,12 @@ type CreateUserInput struct {
 	CouncilType   *string
 	CouncilNumber *string
 	CouncilState  *string
+	// CPF/BirthDate/Sex/Phone are only stored for health professionals — see
+	// Memed prescriber registration (internal/memed) for why they exist.
+	CPF       *string
+	BirthDate *time.Time
+	Sex       *models.UserSex
+	Phone     *string
 }
 
 func (s *UserService) Create(ctx context.Context, tenantID uuid.UUID, in CreateUserInput) (*models.User, error) {
@@ -72,6 +79,10 @@ func (s *UserService) Create(ctx context.Context, tenantID uuid.UUID, in CreateU
 		user.CouncilType = in.CouncilType
 		user.CouncilNumber = in.CouncilNumber
 		user.CouncilState = in.CouncilState
+		user.CPF = in.CPF
+		user.BirthDate = in.BirthDate
+		user.Sex = in.Sex
+		user.Phone = in.Phone
 	}
 
 	if err := s.users.Create(ctx, tenantID, user); err != nil {
@@ -96,6 +107,10 @@ type UpdateUserInput struct {
 	CouncilType   *string
 	CouncilNumber *string
 	CouncilState  *string
+	CPF           *string
+	BirthDate     *time.Time
+	Sex           *models.UserSex
+	Phone         *string
 }
 
 // Update loads the existing row and mutates only the editable profile
@@ -126,10 +141,18 @@ func (s *UserService) Update(ctx context.Context, tenantID, id uuid.UUID, in Upd
 		existing.CouncilType = in.CouncilType
 		existing.CouncilNumber = in.CouncilNumber
 		existing.CouncilState = in.CouncilState
+		existing.CPF = in.CPF
+		existing.BirthDate = in.BirthDate
+		existing.Sex = in.Sex
+		existing.Phone = in.Phone
 	} else {
 		existing.CouncilType = nil
 		existing.CouncilNumber = nil
 		existing.CouncilState = nil
+		existing.CPF = nil
+		existing.BirthDate = nil
+		existing.Sex = nil
+		existing.Phone = nil
 	}
 
 	if err := s.users.Update(ctx, tenantID, existing); err != nil {

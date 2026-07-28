@@ -1,6 +1,9 @@
 package handlers
 
 import (
+	"fmt"
+	"time"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 
@@ -8,6 +11,19 @@ import (
 	"github.com/castilho/health-os/internal/domain/models"
 	"github.com/castilho/health-os/internal/service"
 )
+
+// parseBirthDate mirrors patientRequest's convention (patient_handler.go):
+// dates travel over the wire as "YYYY-MM-DD" strings, never RFC3339.
+func parseBirthDate(raw *string) (*time.Time, error) {
+	if raw == nil || *raw == "" {
+		return nil, nil
+	}
+	t, err := time.Parse("2006-01-02", *raw)
+	if err != nil {
+		return nil, fmt.Errorf("%w: birth_date must be formatted as YYYY-MM-DD", service.ErrValidation)
+	}
+	return &t, nil
+}
 
 type UserHandler struct {
 	users *service.UserService
@@ -25,12 +41,25 @@ type createUserRequest struct {
 	CouncilType   *string `json:"council_type"`
 	CouncilNumber *string `json:"council_number"`
 	CouncilState  *string `json:"council_state"`
+	CPF           *string `json:"cpf"`
+	BirthDate     *string `json:"birth_date"` // "YYYY-MM-DD"
+	Sex           *string `json:"sex"`
+	Phone         *string `json:"phone"`
 }
 
 func (h *UserHandler) Create(c *fiber.Ctx) error {
 	var req createUserRequest
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid request body"})
+	}
+	birthDate, err := parseBirthDate(req.BirthDate)
+	if err != nil {
+		return respondErr(c, err)
+	}
+	var sex *models.UserSex
+	if req.Sex != nil {
+		s := models.UserSex(*req.Sex)
+		sex = &s
 	}
 	user, err := h.users.Create(c.Context(), appmiddleware.TenantID(c), service.CreateUserInput{
 		Name:          req.Name,
@@ -40,6 +69,10 @@ func (h *UserHandler) Create(c *fiber.Ctx) error {
 		CouncilType:   req.CouncilType,
 		CouncilNumber: req.CouncilNumber,
 		CouncilState:  req.CouncilState,
+		CPF:           req.CPF,
+		BirthDate:     birthDate,
+		Sex:           sex,
+		Phone:         req.Phone,
 	})
 	if err != nil {
 		return respondErr(c, err)
@@ -84,6 +117,10 @@ type updateUserRequest struct {
 	CouncilType   *string `json:"council_type"`
 	CouncilNumber *string `json:"council_number"`
 	CouncilState  *string `json:"council_state"`
+	CPF           *string `json:"cpf"`
+	BirthDate     *string `json:"birth_date"` // "YYYY-MM-DD"
+	Sex           *string `json:"sex"`
+	Phone         *string `json:"phone"`
 }
 
 func (h *UserHandler) Update(c *fiber.Ctx) error {
@@ -95,6 +132,15 @@ func (h *UserHandler) Update(c *fiber.Ctx) error {
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid request body"})
 	}
+	birthDate, err := parseBirthDate(req.BirthDate)
+	if err != nil {
+		return respondErr(c, err)
+	}
+	var sex *models.UserSex
+	if req.Sex != nil {
+		s := models.UserSex(*req.Sex)
+		sex = &s
+	}
 	user, err := h.users.Update(c.Context(), appmiddleware.TenantID(c), id, service.UpdateUserInput{
 		Name:          req.Name,
 		Email:         req.Email,
@@ -103,6 +149,10 @@ func (h *UserHandler) Update(c *fiber.Ctx) error {
 		CouncilType:   req.CouncilType,
 		CouncilNumber: req.CouncilNumber,
 		CouncilState:  req.CouncilState,
+		CPF:           req.CPF,
+		BirthDate:     birthDate,
+		Sex:           sex,
+		Phone:         req.Phone,
 	})
 	if err != nil {
 		return respondErr(c, err)

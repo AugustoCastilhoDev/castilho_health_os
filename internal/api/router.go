@@ -22,6 +22,7 @@ type Handlers struct {
 	MedicalRecord    *handlers.MedicalRecordHandler
 	DocumentTemplate *handlers.DocumentTemplateHandler
 	PatientDocument  *handlers.PatientDocumentHandler
+	Memed            *handlers.MemedHandler
 }
 
 func RegisterRoutes(app *fiber.App, h *Handlers, issuer *auth.JWTIssuer, healthCheck fiber.Handler) {
@@ -78,6 +79,11 @@ func RegisterRoutes(app *fiber.App, h *Handlers, issuer *auth.JWTIssuer, healthC
 	patients.Post("/:patientID/documents/upload-url", h.PatientDocument.CreateUploadURL)
 	patients.Post("/:patientID/documents", h.PatientDocument.Create)
 	patients.Get("/:patientID/documents", h.PatientDocument.ListByPatient)
+	// Issuing a prescription is health-professional-only, same as writing a
+	// medical record; reading the audit trail is open like the rest of the
+	// patient record.
+	patients.Post("/:patientID/memed-prescriptions", health, h.Memed.CreatePrescriptionLog)
+	patients.Get("/:patientID/memed-prescriptions", h.Memed.ListByPatient)
 
 	// Who may trigger which specific status transition (e.g. only the
 	// assigned professional starts IN_PROGRESS) isn't enforced yet — the
@@ -136,6 +142,12 @@ func RegisterRoutes(app *fiber.App, h *Handlers, issuer *auth.JWTIssuer, healthC
 	patientDocuments := protected.Group("/patient-documents")
 	patientDocuments.Get("/:id/download-url", h.PatientDocument.DownloadURL)
 	patientDocuments.Delete("/:id", admin, h.PatientDocument.Delete)
+
+	// GetPrescriberToken is what the frontend calls to load Memed's own
+	// widget for the current professional — health-professional-only since
+	// only DOCTOR/DENTIST issue prescriptions.
+	protected.Get("/memed/token", health, h.Memed.GetPrescriberToken)
+	protected.Post("/memed-prescriptions/:memedPrescriptionID/cancel", health, h.Memed.Cancel)
 
 	protected.Get("/admin/ping", admin, func(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"message": "pong"})
