@@ -18,6 +18,14 @@ interface IssuePrescriptionModalProps {
 
 type Status = 'loading-token' | 'loading-widget' | 'ready' | 'error'
 
+// Memed's setPaciente expects data_nascimento as "dd/mm/yyyy" — PatientDTO
+// carries birth_date as the ISO string the API returns.
+function formatBirthDateForMemed(isoDate: string): string {
+  const d = new Date(isoDate)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${pad(d.getUTCDate())}/${pad(d.getUTCMonth() + 1)}/${d.getUTCFullYear()}`
+}
+
 // IssuePrescriptionModal loads Memed's own widget (this app never renders
 // prescription UI itself — see ROADMAP.md's "Backend nunca é dono do
 // conteúdo da receita médica"). The widget takes over as a full-screen
@@ -47,13 +55,14 @@ export function IssuePrescriptionModal({ patient, onClose, onIssued }: IssuePres
           const moduleData = payload as MemedModuleInitEvent
           if (moduleData?.name !== 'plataforma.prescricao') return
 
-          mdHub.command.send('plataforma.prescricao', 'setPaciente', {
-            nome: patient.name,
-            idExterno: patient.id,
-            cpf: patient.document,
-            telefone: patient.phone,
-            email: patient.email,
-          })
+          const setPaciente = () =>
+            mdHub.command.send('plataforma.prescricao', 'setPaciente', {
+              idExterno: patient.id,
+              nome: patient.name,
+              ...(patient.document ? { cpf: patient.document } : { withoutCpf: true }),
+              ...(patient.birth_date ? { data_nascimento: formatBirthDateForMemed(patient.birth_date) } : {}),
+              ...(patient.phone ? { telefone: patient.phone } : {}),
+            })
 
           mdHub.event.add('prescricaoImpressa', (payload) => {
             const data = payload as MemedPrescriptionIssuedEvent
@@ -72,7 +81,19 @@ export function IssuePrescriptionModal({ patient, onClose, onIssued }: IssuePres
               })
           })
 
-          mdHub.command.send('plataforma.prescricao', 'newPrescription')
+          // Sending any command synchronously right after core:moduleInit
+          // fires had no effect in live testing (the module isn't actually
+          // ready yet despite the event having fired) — module.show needed
+          // ~1s before it took effect, so the same delay is applied to every
+          // command here rather than assuming setPaciente is exempt.
+          setTimeout(() => {
+            setPaciente()
+            mdHub.command.send('plataforma.prescricao', 'newPrescription')
+            // Modules initialize hidden (display:none) — this call is what
+            // Memed's own troubleshooting docs give for "only an
+            // autofocusing block message displays".
+            mdHub.module.show('plataforma.prescricao')
+          }, 1000)
         })
 
         if (!cancelled) setStatus('ready')
