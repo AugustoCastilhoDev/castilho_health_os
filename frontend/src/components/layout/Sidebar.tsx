@@ -1,8 +1,9 @@
 import { Link, NavLink } from 'react-router-dom'
-import { Activity, Calendar, LogOut, Users, Wallet, Package, FileText } from 'lucide-react'
+import { Activity, Calendar, LogOut, Users, Wallet, Package, FileText, UserCog } from 'lucide-react'
 
 interface SidebarProps {
   clinicName: string
+  isAdmin: boolean
   onLogout: () => void
 }
 
@@ -16,7 +17,7 @@ function navLinkClass(isActive: boolean): string {
 // somewhere that 404s, so the shell still reads as complete.
 const comingSoon = [{ label: 'Estoque', icon: Package }]
 
-export function Sidebar({ clinicName, onLogout }: SidebarProps) {
+export function Sidebar({ clinicName, isAdmin, onLogout }: SidebarProps) {
   return (
     <aside className="flex h-screen w-64 shrink-0 flex-col bg-brand-sidebar text-slate-100">
       <Link to="/" className="flex items-center gap-2 px-6 py-6">
@@ -51,6 +52,12 @@ export function Sidebar({ clinicName, onLogout }: SidebarProps) {
           <FileText size={18} />
           Documentos
         </NavLink>
+        {isAdmin && (
+          <NavLink to="/usuarios" className={({ isActive }) => navLinkClass(isActive)}>
+            <UserCog size={18} />
+            Usuários
+          </NavLink>
+        )}
         {comingSoon.map(({ label, icon: Icon }) => (
           <div
             key={label}

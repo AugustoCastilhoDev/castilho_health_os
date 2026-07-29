@@ -23,6 +23,10 @@ export interface UserDTO {
   council_type?: string
   council_number?: string
   council_state?: string
+  cpf?: string
+  birth_date?: string
+  sex?: 'M' | 'F'
+  phone?: string
 }
 
 export interface PatientDTO {
