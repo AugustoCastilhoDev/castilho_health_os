@@ -21,4 +21,8 @@ var (
 	// ErrLocked is returned when an update targets a row that has been
 	// finalized (e.g. a locked MedicalRecord) and must no longer change.
 	ErrLocked = errors.New("repository: record is locked")
+
+	// ErrInsufficientStock is returned when an OUT movement would take a
+	// StockItem's QuantityOnHand below zero.
+	ErrInsufficientStock = errors.New("repository: insufficient stock quantity")
 )

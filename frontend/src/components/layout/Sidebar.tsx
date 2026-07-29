@@ -13,10 +13,6 @@ function navLinkClass(isActive: boolean): string {
   }`
 }
 
-// Estoque doesn't have a screen yet — rendered inert rather than linking
-// somewhere that 404s, so the shell still reads as complete.
-const comingSoon = [{ label: 'Estoque', icon: Package }]
-
 export function Sidebar({ clinicName, isAdmin, onLogout }: SidebarProps) {
   return (
     <aside className="flex h-screen w-64 shrink-0 flex-col bg-brand-sidebar text-slate-100">
@@ -52,24 +48,16 @@ export function Sidebar({ clinicName, isAdmin, onLogout }: SidebarProps) {
           <FileText size={18} />
           Documentos
         </NavLink>
+        <NavLink to="/estoque" className={({ isActive }) => navLinkClass(isActive)}>
+          <Package size={18} />
+          Estoque
+        </NavLink>
         {isAdmin && (
           <NavLink to="/usuarios" className={({ isActive }) => navLinkClass(isActive)}>
             <UserCog size={18} />
             Usuários
           </NavLink>
         )}
-        {comingSoon.map(({ label, icon: Icon }) => (
-          <div
-            key={label}
-            className="flex items-center gap-3 rounded-lg px-4 py-2.5 text-sm font-medium text-slate-500"
-          >
-            <Icon size={18} />
-            {label}
-            <span className="ml-auto rounded-full bg-white/5 px-2 py-0.5 text-[10px] uppercase tracking-wide text-slate-500">
-              em breve
-            </span>
-          </div>
-        ))}
       </nav>
 
       <button

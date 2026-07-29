@@ -23,6 +23,7 @@ type Handlers struct {
 	DocumentTemplate *handlers.DocumentTemplateHandler
 	PatientDocument  *handlers.PatientDocumentHandler
 	Memed            *handlers.MemedHandler
+	Stock            *handlers.StockHandler
 }
 
 func RegisterRoutes(app *fiber.App, h *Handlers, issuer *auth.JWTIssuer, healthCheck fiber.Handler) {
@@ -148,6 +149,18 @@ func RegisterRoutes(app *fiber.App, h *Handlers, issuer *auth.JWTIssuer, healthC
 	// only DOCTOR/DENTIST issue prescriptions.
 	protected.Get("/memed/token", health, h.Memed.GetPrescriberToken)
 	protected.Post("/memed-prescriptions/:memedPrescriptionID/cancel", health, h.Memed.Cancel)
+
+	// Estoque: managing items/quantities is front-desk work (same group
+	// that registers a patient payment), same reasoning as FinancialRule
+	// being gated by `finance` — List/Get stay open to any authenticated
+	// role since checking stock is normal day-to-day use.
+	stockItems := protected.Group("/stock-items")
+	stockItems.Post("/", frontDesk, h.Stock.CreateItem)
+	stockItems.Get("/", h.Stock.ListItems)
+	stockItems.Get("/:id", h.Stock.GetItem)
+	stockItems.Put("/:id", frontDesk, h.Stock.UpdateItem)
+	stockItems.Post("/:itemID/movements", frontDesk, h.Stock.RecordMovement)
+	stockItems.Get("/:itemID/movements", h.Stock.ListMovements)
 
 	protected.Get("/admin/ping", admin, func(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"message": "pong"})

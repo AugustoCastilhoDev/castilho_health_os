@@ -276,3 +276,35 @@ func (f *fakeObjectStorage) PresignDownload(ctx context.Context, fileKey string,
 func (f *fakeObjectStorage) DeleteObject(ctx context.Context, fileKey string) error {
 	return f.deleteObjectFn(ctx, fileKey)
 }
+
+type fakeStockItemRepo struct {
+	createFn   func(ctx context.Context, tenantID uuid.UUID, item *models.StockItem) error
+	findByIDFn func(ctx context.Context, tenantID, id uuid.UUID) (*models.StockItem, error)
+	updateFn   func(ctx context.Context, tenantID uuid.UUID, item *models.StockItem) error
+	listFn     func(ctx context.Context, tenantID uuid.UUID) ([]models.StockItem, error)
+}
+
+func (f *fakeStockItemRepo) Create(ctx context.Context, tenantID uuid.UUID, item *models.StockItem) error {
+	return f.createFn(ctx, tenantID, item)
+}
+func (f *fakeStockItemRepo) FindByID(ctx context.Context, tenantID, id uuid.UUID) (*models.StockItem, error) {
+	return f.findByIDFn(ctx, tenantID, id)
+}
+func (f *fakeStockItemRepo) Update(ctx context.Context, tenantID uuid.UUID, item *models.StockItem) error {
+	return f.updateFn(ctx, tenantID, item)
+}
+func (f *fakeStockItemRepo) List(ctx context.Context, tenantID uuid.UUID) ([]models.StockItem, error) {
+	return f.listFn(ctx, tenantID)
+}
+
+type fakeStockMovementRepo struct {
+	recordMovementFn func(ctx context.Context, tenantID uuid.UUID, movement *models.StockMovement) (*models.StockItem, error)
+	listByItemFn     func(ctx context.Context, tenantID, itemID uuid.UUID) ([]models.StockMovement, error)
+}
+
+func (f *fakeStockMovementRepo) RecordMovement(ctx context.Context, tenantID uuid.UUID, movement *models.StockMovement) (*models.StockItem, error) {
+	return f.recordMovementFn(ctx, tenantID, movement)
+}
+func (f *fakeStockMovementRepo) ListByItem(ctx context.Context, tenantID, itemID uuid.UUID) ([]models.StockMovement, error) {
+	return f.listByItemFn(ctx, tenantID, itemID)
+}

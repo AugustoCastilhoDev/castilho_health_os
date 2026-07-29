@@ -148,3 +148,24 @@ export interface MemedPrescriptionLogDTO {
   status: 'ISSUED' | 'CANCELLED'
   issued_at: string
 }
+
+export interface StockItemDTO {
+  id: string
+  tenant_id: string
+  name: string
+  unit: string
+  quantity_on_hand: number
+  min_quantity?: number
+  is_active: boolean
+}
+
+export interface StockMovementDTO {
+  id: string
+  tenant_id: string
+  created_at: string
+  item_id: string
+  type: 'IN' | 'OUT'
+  quantity: number
+  note?: string
+  created_by_id: string
+}

@@ -11,6 +11,7 @@ import { PatientRecordPage } from './pages/PatientRecordPage'
 import { FinancialPage } from './pages/FinancialPage'
 import { DocumentTemplatesPage } from './pages/DocumentTemplatesPage'
 import { UsersPage } from './pages/UsersPage'
+import { EstoquePage } from './pages/EstoquePage'
 
 function App() {
   return (
@@ -29,6 +30,7 @@ function App() {
               <Route path="financeiro" element={<FinancialPage />} />
               <Route path="documentos" element={<DocumentTemplatesPage />} />
               <Route path="usuarios" element={<UsersPage />} />
+              <Route path="estoque" element={<EstoquePage />} />
             </Route>
           </Route>
         </Routes>
