@@ -1,3 +1,4 @@
+import DOMPurify from 'dompurify'
 import { FileText, Lock } from 'lucide-react'
 import { StatusBadge } from '../common/StatusBadge'
 import { formatDateLong, formatTime } from '../../lib/format'
@@ -85,7 +86,10 @@ export function PatientTimeline({ entries }: PatientTimelineProps) {
                   </span>
                 )}
               </h3>
-              <p className="mt-3 whitespace-pre-wrap text-sm text-brand-text">{entry.content}</p>
+              <div
+                className="rich-content mt-3 whitespace-pre-wrap text-sm text-brand-text"
+                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(entry.content) }}
+              />
               {!entry.isLocked && (entry.onEdit || entry.onLock) && (
                 <div className="mt-4 flex gap-2">
                   {entry.onEdit && (

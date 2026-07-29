@@ -30,3 +30,42 @@
 body {
   @apply bg-brand-bg text-brand-text antialiased;
 }
+
+/*
+ * Shared styling for rich-text content — both the live Tiptap editor
+ * (MedicalRecordFormModal) and the read-only render of saved HTML in
+ * PatientTimeline. Tailwind's preflight strips default list/heading
+ * styling, so these rules restore it scoped to `.rich-content` only,
+ * instead of pulling in the whole @tailwindcss/typography plugin for a
+ * handful of tags.
+ */
+.rich-content p {
+  margin: 0 0 0.5em;
+}
+.rich-content p:last-child {
+  margin-bottom: 0;
+}
+.rich-content ul,
+.rich-content ol {
+  margin: 0 0 0.5em;
+  padding-left: 1.5em;
+}
+.rich-content ul {
+  list-style: disc;
+}
+.rich-content ol {
+  list-style: decimal;
+}
+.rich-content strong {
+  font-weight: 600;
+}
+.rich-content em {
+  font-style: italic;
+}
+.rich-content p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  color: var(--color-brand-text-muted);
+  pointer-events: none;
+}

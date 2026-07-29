@@ -1,9 +1,17 @@
 import { useState, type FormEvent } from 'react'
 import { Modal } from '../common/Modal'
+import { RichTextEditor } from '../common/RichTextEditor'
 import { useAuth } from '../../lib/auth/AuthContext'
 import { ApiError } from '../../lib/api/client'
 import { RECORD_TYPE_LABEL, type MedicalRecordType } from '../../lib/medicalRecord'
 import type { MedicalRecordDTO } from '../../lib/api/types'
+
+// An empty Tiptap doc serializes to "<p></p>", not "" — strip tags before
+// checking for blank content so that doesn't slip past validation as
+// "non-empty".
+function isHtmlContentEmpty(html: string): boolean {
+  return !html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim()
+}
 
 interface MedicalRecordFormModalProps {
   patientId: string
@@ -30,7 +38,7 @@ export function MedicalRecordFormModal({
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setError(null)
-    if (!content.trim()) {
+    if (isHtmlContentEmpty(content)) {
       setError('Escreva o conteúdo do registro.')
       return
     }
@@ -54,7 +62,7 @@ export function MedicalRecordFormModal({
   }
 
   return (
-    <Modal title={isEditing ? 'Editar Registro' : 'Novo Registro'} onClose={onClose}>
+    <Modal title={isEditing ? 'Editar Registro' : 'Novo Registro'} onClose={onClose} maxWidthClassName="max-w-xl">
       <form className="space-y-4" onSubmit={handleSubmit}>
         <div>
           <label className="mb-1 block text-sm font-medium text-brand-text">Tipo</label>
@@ -73,12 +81,10 @@ export function MedicalRecordFormModal({
 
         <div>
           <label className="mb-1 block text-sm font-medium text-brand-text">Evolução</label>
-          <textarea
+          <RichTextEditor
             value={content}
-            onChange={(e) => setContent(e.target.value)}
-            rows={8}
+            onChange={setContent}
             placeholder="Descreva a evolução clínica do paciente…"
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-action focus:outline-none focus:ring-1 focus:ring-brand-action"
           />
         </div>
 
