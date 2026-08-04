@@ -68,6 +68,7 @@ func main() {
 	memedLogRepo := repository.NewMemedPrescriptionLogRepository(gdb)
 	stockItemRepo := repository.NewStockItemRepository(gdb)
 	stockMovementRepo := repository.NewStockMovementRepository(gdb)
+	odontogramaRepo := repository.NewOdontogramaRepository(gdb)
 
 	settlementService := service.NewSettlementService(appointmentRepo, ruleRepo, txRepo)
 	patientService := service.NewPatientService(patientRepo)
@@ -121,6 +122,7 @@ func main() {
 		PatientDocument:  handlers.NewPatientDocumentHandler(service.NewPatientDocumentService(patientDocumentRepo, objectStorage)),
 		Memed:            handlers.NewMemedHandler(service.NewMemedService(memedLogRepo, userRepo, memedClient), cfg.MemedFrontendScriptURL),
 		Stock:            handlers.NewStockHandler(service.NewStockService(stockItemRepo, stockMovementRepo)),
+		Odontograma:      handlers.NewOdontogramaHandler(service.NewOdontogramaService(odontogramaRepo)),
 	}
 
 	app := fiber.New()

@@ -6,6 +6,7 @@ import { MedicalRecordFormModal } from '../components/prontuario/MedicalRecordFo
 import { GenerateDocumentModal } from '../components/prontuario/GenerateDocumentModal'
 import { PatientDocumentsPanel } from '../components/prontuario/PatientDocumentsPanel'
 import { MemedPrescriptionsPanel } from '../components/prontuario/MemedPrescriptionsPanel'
+import { OdontogramaPanel } from '../components/prontuario/OdontogramaPanel'
 import { calculateAge, initials } from '../lib/format'
 import { useAuth } from '../lib/auth/AuthContext'
 import { ApiError } from '../lib/api/client'
@@ -193,6 +194,8 @@ export function PatientRecordPage() {
         </div>
 
         <MemedPrescriptionsPanel patient={patient} />
+
+        <OdontogramaPanel patientId={patient.id} />
 
         <PatientDocumentsPanel patientId={patient.id} />
 

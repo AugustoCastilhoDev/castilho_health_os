@@ -24,6 +24,7 @@ type Handlers struct {
 	PatientDocument  *handlers.PatientDocumentHandler
 	Memed            *handlers.MemedHandler
 	Stock            *handlers.StockHandler
+	Odontograma      *handlers.OdontogramaHandler
 }
 
 func RegisterRoutes(app *fiber.App, h *Handlers, issuer *auth.JWTIssuer, healthCheck fiber.Handler) {
@@ -51,6 +52,7 @@ func RegisterRoutes(app *fiber.App, h *Handlers, issuer *auth.JWTIssuer, healthC
 	admin := middleware.RequireRole(models.RoleTenantAdmin)
 	finance := middleware.RequireRole(models.RoleTenantAdmin, models.RoleFinance)
 	health := middleware.RequireRole(models.RoleDoctor, models.RoleDentist)
+	dentist := middleware.RequireRole(models.RoleDentist)
 
 	// Get/List are open to any authenticated role (they back "pick a
 	// professional" pickers); mutating a user's account is admin-only.
@@ -85,6 +87,11 @@ func RegisterRoutes(app *fiber.App, h *Handlers, issuer *auth.JWTIssuer, healthC
 	// patient record.
 	patients.Post("/:patientID/memed-prescriptions", health, h.Memed.CreatePrescriptionLog)
 	patients.Get("/:patientID/memed-prescriptions", h.Memed.ListByPatient)
+	// Odontograma: reading the chart/history stays open like the rest of the
+	// patient record; recording a finding/procedure is dentist-only rather
+	// than the broader `health` group, since this module is odonto-exclusive.
+	patients.Get("/:patientID/odontograma", h.Odontograma.GetChart)
+	patients.Get("/:patientID/odontograma-entries", h.Odontograma.ListByPatient)
 
 	// Who may trigger which specific status transition (e.g. only the
 	// assigned professional starts IN_PROGRESS) isn't enforced yet — the
@@ -161,6 +168,9 @@ func RegisterRoutes(app *fiber.App, h *Handlers, issuer *auth.JWTIssuer, healthC
 	stockItems.Put("/:id", frontDesk, h.Stock.UpdateItem)
 	stockItems.Post("/:itemID/movements", frontDesk, h.Stock.RecordMovement)
 	stockItems.Get("/:itemID/movements", h.Stock.ListMovements)
+
+	odontogramaEntries := protected.Group("/odontograma-entries")
+	odontogramaEntries.Post("/", dentist, h.Odontograma.CreateEntry)
 
 	protected.Get("/admin/ping", admin, func(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"message": "pong"})

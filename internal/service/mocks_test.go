@@ -308,3 +308,19 @@ func (f *fakeStockMovementRepo) RecordMovement(ctx context.Context, tenantID uui
 func (f *fakeStockMovementRepo) ListByItem(ctx context.Context, tenantID, itemID uuid.UUID) ([]models.StockMovement, error) {
 	return f.listByItemFn(ctx, tenantID, itemID)
 }
+
+type fakeOdontogramaRepo struct {
+	createFn        func(ctx context.Context, tenantID uuid.UUID, entry *models.OdontogramaEntry) error
+	listByPatientFn func(ctx context.Context, tenantID, patientID uuid.UUID) ([]models.OdontogramaEntry, error)
+	currentChartFn  func(ctx context.Context, tenantID, patientID uuid.UUID) ([]models.OdontogramaEntry, error)
+}
+
+func (f *fakeOdontogramaRepo) Create(ctx context.Context, tenantID uuid.UUID, entry *models.OdontogramaEntry) error {
+	return f.createFn(ctx, tenantID, entry)
+}
+func (f *fakeOdontogramaRepo) ListByPatient(ctx context.Context, tenantID, patientID uuid.UUID) ([]models.OdontogramaEntry, error) {
+	return f.listByPatientFn(ctx, tenantID, patientID)
+}
+func (f *fakeOdontogramaRepo) CurrentChart(ctx context.Context, tenantID, patientID uuid.UUID) ([]models.OdontogramaEntry, error) {
+	return f.currentChartFn(ctx, tenantID, patientID)
+}

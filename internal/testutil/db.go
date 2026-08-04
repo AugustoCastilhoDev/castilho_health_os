@@ -51,6 +51,7 @@ func NewTenant(t *testing.T, gdb *gorm.DB) *models.Tenant {
 		t.Fatalf("create test tenant: %v", err)
 	}
 	t.Cleanup(func() {
+		gdb.Unscoped().Where("tenant_id = ?", tenant.ID).Delete(&models.OdontogramaEntry{})
 		gdb.Unscoped().Where("tenant_id = ?", tenant.ID).Delete(&models.StockMovement{})
 		gdb.Unscoped().Where("tenant_id = ?", tenant.ID).Delete(&models.StockItem{})
 		gdb.Unscoped().Where("tenant_id = ?", tenant.ID).Delete(&models.MemedPrescriptionLog{})

@@ -169,3 +169,14 @@ export interface StockMovementDTO {
   note?: string
   created_by_id: string
 }
+
+export interface OdontogramaEntryDTO {
+  id: string
+  tenant_id: string
+  created_at: string
+  patient_id: string
+  tooth_number: string
+  condition: string
+  note?: string
+  recorded_by_id: string
+}
