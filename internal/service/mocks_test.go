@@ -278,10 +278,11 @@ func (f *fakeObjectStorage) DeleteObject(ctx context.Context, fileKey string) er
 }
 
 type fakeStockItemRepo struct {
-	createFn   func(ctx context.Context, tenantID uuid.UUID, item *models.StockItem) error
-	findByIDFn func(ctx context.Context, tenantID, id uuid.UUID) (*models.StockItem, error)
-	updateFn   func(ctx context.Context, tenantID uuid.UUID, item *models.StockItem) error
-	listFn     func(ctx context.Context, tenantID uuid.UUID) ([]models.StockItem, error)
+	createFn     func(ctx context.Context, tenantID uuid.UUID, item *models.StockItem) error
+	findByIDFn   func(ctx context.Context, tenantID, id uuid.UUID) (*models.StockItem, error)
+	findByNameFn func(ctx context.Context, tenantID uuid.UUID, name string) (*models.StockItem, error)
+	updateFn     func(ctx context.Context, tenantID uuid.UUID, item *models.StockItem) error
+	listFn       func(ctx context.Context, tenantID uuid.UUID) ([]models.StockItem, error)
 }
 
 func (f *fakeStockItemRepo) Create(ctx context.Context, tenantID uuid.UUID, item *models.StockItem) error {
@@ -289,6 +290,9 @@ func (f *fakeStockItemRepo) Create(ctx context.Context, tenantID uuid.UUID, item
 }
 func (f *fakeStockItemRepo) FindByID(ctx context.Context, tenantID, id uuid.UUID) (*models.StockItem, error) {
 	return f.findByIDFn(ctx, tenantID, id)
+}
+func (f *fakeStockItemRepo) FindByName(ctx context.Context, tenantID uuid.UUID, name string) (*models.StockItem, error) {
+	return f.findByNameFn(ctx, tenantID, name)
 }
 func (f *fakeStockItemRepo) Update(ctx context.Context, tenantID uuid.UUID, item *models.StockItem) error {
 	return f.updateFn(ctx, tenantID, item)

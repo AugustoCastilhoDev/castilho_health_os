@@ -172,6 +172,18 @@ export interface StockMovementDTO {
   created_by_id: string
 }
 
+export interface StockImportIssueDTO {
+  row: number
+  name?: string
+  reason: string
+}
+
+export interface StockImportResultDTO {
+  created: StockItemDTO[]
+  skipped: StockImportIssueDTO[]
+  failed: StockImportIssueDTO[]
+}
+
 export interface OdontogramaEntryDTO {
   id: string
   tenant_id: string

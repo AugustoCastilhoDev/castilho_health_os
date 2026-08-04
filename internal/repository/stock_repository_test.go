@@ -13,6 +13,23 @@ import (
 	"github.com/castilho/health-os/internal/testutil"
 )
 
+func TestStockItemRepository_FindByName_IsCaseInsensitiveAndReportsNotFound(t *testing.T) {
+	gdb := testutil.ConnectDB(t)
+	tenant := testutil.NewTenant(t, gdb)
+	items := repository.NewStockItemRepository(gdb)
+	ctx := context.Background()
+
+	item := &models.StockItem{Name: "Luva Cirúrgica", Unit: "par"}
+	require.NoError(t, items.Create(ctx, tenant.ID, item))
+
+	found, err := items.FindByName(ctx, tenant.ID, "luva cirúrgica")
+	require.NoError(t, err)
+	assert.Equal(t, item.ID, found.ID)
+
+	_, err = items.FindByName(ctx, tenant.ID, "não existe")
+	require.ErrorIs(t, err, repository.ErrNotFound)
+}
+
 func TestStockRepository_RecordMovement_UpdatesBalanceAndLogs(t *testing.T) {
 	gdb := testutil.ConnectDB(t)
 	tenant := testutil.NewTenant(t, gdb)

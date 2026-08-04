@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/castilho/health-os/internal/domain/models"
+	"github.com/castilho/health-os/internal/repository"
 	"github.com/castilho/health-os/internal/service"
 )
 
@@ -116,6 +117,77 @@ func TestStockService_RecordMovement_DelegatesToRepository(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, called)
 	assert.Equal(t, 5, item.QuantityOnHand)
+}
+
+func TestStockService_ImportItems_CreatesValidRows(t *testing.T) {
+	var createdNames []string
+	items := &fakeStockItemRepo{
+		findByNameFn: func(context.Context, uuid.UUID, string) (*models.StockItem, error) {
+			return nil, repository.ErrNotFound
+		},
+		createFn: func(_ context.Context, _ uuid.UUID, item *models.StockItem) error {
+			item.ID = uuid.New()
+			createdNames = append(createdNames, item.Name)
+			return nil
+		},
+	}
+	movements := &fakeStockMovementRepo{
+		recordMovementFn: func(_ context.Context, _ uuid.UUID, m *models.StockMovement) (*models.StockItem, error) {
+			return &models.StockItem{Name: "Luva", Unit: "un", QuantityOnHand: m.Quantity}, nil
+		},
+	}
+	svc := service.NewStockService(items, movements)
+
+	result := svc.ImportItems(context.Background(), uuid.New(), []service.StockImportRow{
+		{SourceRow: 2, Name: "Luva", Unit: "un", InitialQuantity: 10},
+		{SourceRow: 3, Name: "Gaze", Unit: "cx"},
+	}, uuid.New())
+
+	assert.Len(t, result.Created, 2)
+	assert.Empty(t, result.Skipped)
+	assert.Empty(t, result.Failed)
+	assert.ElementsMatch(t, []string{"Luva", "Gaze"}, createdNames)
+}
+
+func TestStockService_ImportItems_SkipsExistingName(t *testing.T) {
+	items := &fakeStockItemRepo{
+		findByNameFn: func(context.Context, uuid.UUID, string) (*models.StockItem, error) {
+			return &models.StockItem{Name: "Luva"}, nil // already exists
+		},
+	}
+	svc := service.NewStockService(items, &fakeStockMovementRepo{})
+
+	result := svc.ImportItems(context.Background(), uuid.New(), []service.StockImportRow{
+		{SourceRow: 2, Name: "Luva", Unit: "un"},
+	}, uuid.New())
+
+	assert.Empty(t, result.Created)
+	require.Len(t, result.Skipped, 1)
+	assert.Equal(t, 2, result.Skipped[0].Row)
+	assert.Equal(t, "Luva", result.Skipped[0].Name)
+}
+
+func TestStockService_ImportItems_ReportsRowFailureWithoutBlockingOthers(t *testing.T) {
+	items := &fakeStockItemRepo{
+		findByNameFn: func(context.Context, uuid.UUID, string) (*models.StockItem, error) {
+			return nil, repository.ErrNotFound
+		},
+		createFn: func(_ context.Context, _ uuid.UUID, item *models.StockItem) error {
+			item.ID = uuid.New()
+			return nil
+		},
+	}
+	svc := service.NewStockService(items, &fakeStockMovementRepo{})
+
+	result := svc.ImportItems(context.Background(), uuid.New(), []service.StockImportRow{
+		{SourceRow: 2, Name: "", Unit: "un"}, // missing name -> CreateItem validation fails
+		{SourceRow: 3, Name: "Gaze", Unit: "cx"},
+	}, uuid.New())
+
+	require.Len(t, result.Failed, 1)
+	assert.Equal(t, 2, result.Failed[0].Row)
+	require.Len(t, result.Created, 1)
+	assert.Equal(t, "Gaze", result.Created[0].Name)
 }
 
 func intPtr(n int) *int { return &n }

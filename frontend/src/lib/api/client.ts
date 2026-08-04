@@ -16,10 +16,15 @@ export async function apiRequest<T>(
   token: string | null,
   init: RequestInit = {},
 ): Promise<T> {
+  // A FormData body (file upload) must NOT get a manual Content-Type — the
+  // browser sets its own `multipart/form-data; boundary=...` when it builds
+  // the request, and overriding it here would drop the boundary and break
+  // parsing server-side.
+  const isFormData = init.body instanceof FormData
   const res = await fetch(`${API_BASE_URL}${path}`, {
     ...init,
     headers: {
-      'Content-Type': 'application/json',
+      ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...init.headers,
     },

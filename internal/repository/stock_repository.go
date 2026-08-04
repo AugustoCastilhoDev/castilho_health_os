@@ -15,6 +15,10 @@ import (
 type StockItemRepository interface {
 	Create(ctx context.Context, tenantID uuid.UUID, item *models.StockItem) error
 	FindByID(ctx context.Context, tenantID, id uuid.UUID) (*models.StockItem, error)
+	// FindByName does a case-insensitive match — used by CSV import to skip
+	// a row whose name already exists in the tenant's stock rather than
+	// creating a duplicate. Returns ErrNotFound like FindByID when no match.
+	FindByName(ctx context.Context, tenantID uuid.UUID, name string) (*models.StockItem, error)
 	// Update replaces name/unit/min_quantity/is_active only — never
 	// quantity_on_hand, which is owned exclusively by
 	// StockMovementRepository.RecordMovement.
@@ -39,6 +43,20 @@ func (r *stockItemRepository) FindByID(ctx context.Context, tenantID, id uuid.UU
 	var item models.StockItem
 	err := r.db.WithContext(ctx).
 		Where("tenant_id = ? AND id = ?", tenantID, id).
+		First(&item).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	return &item, nil
+}
+
+func (r *stockItemRepository) FindByName(ctx context.Context, tenantID uuid.UUID, name string) (*models.StockItem, error) {
+	var item models.StockItem
+	err := r.db.WithContext(ctx).
+		Where("tenant_id = ? AND LOWER(name) = LOWER(?)", tenantID, name).
 		First(&item).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {

@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
-import { Plus } from 'lucide-react'
+import { Plus, Upload } from 'lucide-react'
 import { useAuth } from '../lib/auth/AuthContext'
 import { ApiError } from '../lib/api/client'
 import { StockItemFormModal } from '../components/estoque/StockItemFormModal'
 import { StockMovementModal } from '../components/estoque/StockMovementModal'
 import { StockMovementHistoryModal } from '../components/estoque/StockMovementHistoryModal'
+import { StockImportModal } from '../components/estoque/StockImportModal'
 import type { StockItemDTO } from '../lib/api/types'
 
 const CAN_MANAGE_STOCK_ROLES = new Set(['TENANT_ADMIN', 'RECEPTIONIST'])
@@ -22,6 +23,7 @@ export function EstoquePage() {
   const [editingItem, setEditingItem] = useState<StockItemDTO | 'new' | null>(null)
   const [movingItem, setMovingItem] = useState<StockItemDTO | null>(null)
   const [historyItem, setHistoryItem] = useState<StockItemDTO | null>(null)
+  const [importing, setImporting] = useState(false)
 
   const canManage = user ? CAN_MANAGE_STOCK_ROLES.has(user.role) : false
 
@@ -51,14 +53,24 @@ export function EstoquePage() {
           <h1 className="text-xl font-semibold text-brand-text">Estoque</h1>
         </div>
         {canManage && (
-          <button
-            type="button"
-            onClick={() => setEditingItem('new')}
-            className="flex items-center gap-2 rounded-lg bg-brand-action px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand-action-hover"
-          >
-            <Plus size={18} />
-            Novo Item
-          </button>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setImporting(true)}
+              className="flex items-center gap-2 rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-medium text-brand-text hover:bg-slate-50"
+            >
+              <Upload size={18} />
+              Importar CSV
+            </button>
+            <button
+              type="button"
+              onClick={() => setEditingItem('new')}
+              className="flex items-center gap-2 rounded-lg bg-brand-action px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand-action-hover"
+            >
+              <Plus size={18} />
+              Novo Item
+            </button>
+          </div>
         )}
       </header>
 
@@ -173,6 +185,13 @@ export function EstoquePage() {
       )}
 
       {historyItem && <StockMovementHistoryModal item={historyItem} onClose={() => setHistoryItem(null)} />}
+
+      {importing && (
+        <StockImportModal
+          onClose={() => setImporting(false)}
+          onImported={() => setReloadTick((t) => t + 1)}
+        />
+      )}
     </>
   )
 }

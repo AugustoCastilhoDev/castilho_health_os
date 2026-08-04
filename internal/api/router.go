@@ -175,6 +175,7 @@ func RegisterRoutes(app *fiber.App, h *Handlers, issuer *auth.JWTIssuer, healthC
 	stockItems.Put("/:id", frontDesk, h.Stock.UpdateItem)
 	stockItems.Post("/:itemID/movements", frontDesk, h.Stock.RecordMovement)
 	stockItems.Get("/:itemID/movements", h.Stock.ListMovements)
+	stockItems.Post("/import", frontDesk, h.Stock.ImportItems)
 
 	odontogramaEntries := protected.Group("/odontograma-entries")
 	odontogramaEntries.Post("/", dentist, h.Odontograma.CreateEntry)
