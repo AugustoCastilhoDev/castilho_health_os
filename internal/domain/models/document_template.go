@@ -29,4 +29,24 @@ type DocumentTemplate struct {
 	Content string `gorm:"type:text;not null" json:"content"`
 
 	IsActive bool `gorm:"not null;default:true" json:"is_active"`
+
+	// Layout toggles for the optional letterhead blocks internal/pdf.Render
+	// can draw around Content — independent of {{tag}} substitution, and
+	// independent of each other except IncludeStamp, which only has an
+	// effect when IncludeSignature also draws the signature line it sits
+	// below. Deliberately NO `default:true` gorm tag here, even though the
+	// migration's column default is TRUE: GORM omits a field from the
+	// INSERT whenever its Go value equals the type's zero value AND the
+	// tag carries a `default`, which for a plain bool makes "the user
+	// explicitly unchecked this box" indistinguishable from "never set" —
+	// every unchecked checkbox silently came back true. Found live via
+	// Playwright (a template created with every box unchecked still
+	// rendered the full letterhead). Without the tag, GORM always sends
+	// the real Go value, so Create matches the checkbox state exactly; the
+	// DB column default only still matters for a hypothetical raw-SQL
+	// insert that bypasses this struct entirely.
+	IncludeHeader    bool `gorm:"not null" json:"include_header"`
+	IncludeFooter    bool `gorm:"not null" json:"include_footer"`
+	IncludeSignature bool `gorm:"not null" json:"include_signature"`
+	IncludeStamp     bool `gorm:"not null" json:"include_stamp"`
 }

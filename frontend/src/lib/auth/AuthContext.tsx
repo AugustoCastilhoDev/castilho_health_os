@@ -14,6 +14,7 @@ interface AuthContextValue {
   login: (tenantSlug: string, email: string, password: string) => Promise<void>
   logout: () => void
   apiFetch: <T>(path: string, init?: RequestInit) => Promise<T>
+  refreshTenant: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -96,9 +97,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     clearSession()
   }, [clearSession])
 
+  // Lets a settings screen pull the freshly-saved tenant (name, logo, ...)
+  // back into context immediately — e.g. so the sidebar's clinic name
+  // updates without requiring a full reload/re-login.
+  const refreshTenant = useCallback(async () => {
+    if (!token) return
+    const tenantData = await apiRequest<TenantDTO>('/api/tenant', token)
+    setTenant(tenantData)
+  }, [token])
+
   const value = useMemo(
-    () => ({ token, claims, user, tenant, loading, login, logout, apiFetch }),
-    [token, claims, user, tenant, loading, login, logout, apiFetch],
+    () => ({ token, claims, user, tenant, loading, login, logout, apiFetch, refreshTenant }),
+    [token, claims, user, tenant, loading, login, logout, apiFetch, refreshTenant],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

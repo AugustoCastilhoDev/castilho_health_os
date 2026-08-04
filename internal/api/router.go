@@ -74,6 +74,15 @@ func RegisterRoutes(app *fiber.App, h *Handlers, issuer *auth.JWTIssuer, healthC
 	users.Post("/:id/reset-password", admin, h.User.ResetPassword)
 	users.Put("/me/password", h.User.ChangeOwnPassword)
 
+	// Configurações screen: clinic profile + letterhead logo, admin-only —
+	// same sensitivity level as user management, not day-to-day clinical
+	// work. Two-step logo upload mirrors PatientDocument's presigned flow.
+	protected.Put("/tenant", admin, h.Tenant.UpdateProfile)
+	protected.Post("/tenant/logo/upload-url", admin, h.Tenant.CreateLogoUploadURL)
+	protected.Post("/tenant/logo", admin, h.Tenant.SetLogo)
+	protected.Delete("/tenant/logo", admin, h.Tenant.DeleteLogo)
+	protected.Get("/tenant/logo/download-url", admin, h.Tenant.LogoDownloadURL)
+
 	patients := protected.Group("/patients")
 	patients.Post("/", frontDesk, h.Patient.Create)
 	patients.Get("/", h.Patient.Search)

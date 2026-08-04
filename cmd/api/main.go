@@ -110,15 +110,17 @@ func main() {
 		log.Println("Memed not configured (MEMED_API_KEY/MEMED_SECRET_KEY unset) — prescription issuance disabled")
 	}
 
+	tenantService := service.NewTenantService(gdb, tenantRepo, objectStorage)
+
 	h := &api.Handlers{
 		Auth:             handlers.NewAuthHandler(service.NewAuthService(tenantRepo, userRepo, issuer)),
-		Tenant:           handlers.NewTenantHandler(service.NewTenantService(gdb, tenantRepo)),
+		Tenant:           handlers.NewTenantHandler(tenantService),
 		User:             handlers.NewUserHandler(userService),
 		Patient:          handlers.NewPatientHandler(patientService),
 		Appointment:      handlers.NewAppointmentHandler(service.NewAppointmentService(appointmentRepo), settlementService),
 		Financial:        handlers.NewFinancialHandler(service.NewFinancialService(ruleRepo, txRepo), settlementService),
 		MedicalRecord:    handlers.NewMedicalRecordHandler(service.NewMedicalRecordService(medicalRecordRepo)),
-		DocumentTemplate: handlers.NewDocumentTemplateHandler(service.NewDocumentTemplateService(documentTemplateRepo), patientService, userService),
+		DocumentTemplate: handlers.NewDocumentTemplateHandler(service.NewDocumentTemplateService(documentTemplateRepo), patientService, userService, tenantService),
 		PatientDocument:  handlers.NewPatientDocumentHandler(service.NewPatientDocumentService(patientDocumentRepo, objectStorage)),
 		Memed:            handlers.NewMemedHandler(service.NewMemedService(memedLogRepo, userRepo, memedClient), cfg.MemedFrontendScriptURL),
 		Stock:            handlers.NewStockHandler(service.NewStockService(stockItemRepo, stockMovementRepo)),

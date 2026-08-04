@@ -20,6 +20,10 @@ type ObjectStorage interface {
 	PresignUpload(ctx context.Context, fileKey, contentType string, expiresIn time.Duration) (string, error)
 	PresignDownload(ctx context.Context, fileKey string, expiresIn time.Duration) (string, error)
 	DeleteObject(ctx context.Context, fileKey string) error
+	// DownloadObject reads bytes directly — see *storage.R2Client's doc
+	// comment for why this is the one exception to presigned-only access;
+	// TenantService uses it to embed the clinic logo into a PDF.
+	DownloadObject(ctx context.Context, fileKey string) ([]byte, error)
 }
 
 const presignExpiry = 15 * time.Minute

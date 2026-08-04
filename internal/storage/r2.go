@@ -10,6 +10,7 @@ package storage
 import (
 	"context"
 	"fmt"
+	"io"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -99,6 +100,28 @@ func (c *R2Client) PresignDownload(ctx context.Context, fileKey string, expiresI
 		return "", fmt.Errorf("storage: presigning download for %q: %w", fileKey, err)
 	}
 	return req.URL, nil
+}
+
+// DownloadObject reads an object's bytes directly into memory — the one
+// exception to this package's "never touch file bytes" rule, needed when
+// the server itself has to embed a file into something it generates (the
+// clinic logo into a letterhead PDF) rather than handing the browser a
+// presigned URL. Only ever used for small, server-controlled assets like a
+// logo — never for arbitrary patient documents, which stay presigned-only.
+func (c *R2Client) DownloadObject(ctx context.Context, fileKey string) ([]byte, error) {
+	out, err := c.s3.GetObject(ctx, &s3.GetObjectInput{
+		Bucket: aws.String(c.bucket),
+		Key:    aws.String(fileKey),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("storage: downloading %q: %w", fileKey, err)
+	}
+	defer out.Body.Close()
+	data, err := io.ReadAll(out.Body)
+	if err != nil {
+		return nil, fmt.Errorf("storage: reading %q: %w", fileKey, err)
+	}
+	return data, nil
 }
 
 // DeleteObject removes the object outright — used when a PatientDocument

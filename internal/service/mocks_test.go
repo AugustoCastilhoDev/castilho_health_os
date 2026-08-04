@@ -265,6 +265,7 @@ type fakeObjectStorage struct {
 	presignUploadFn   func(ctx context.Context, fileKey, contentType string, expiresIn time.Duration) (string, error)
 	presignDownloadFn func(ctx context.Context, fileKey string, expiresIn time.Duration) (string, error)
 	deleteObjectFn    func(ctx context.Context, fileKey string) error
+	downloadObjectFn  func(ctx context.Context, fileKey string) ([]byte, error)
 }
 
 func (f *fakeObjectStorage) PresignUpload(ctx context.Context, fileKey, contentType string, expiresIn time.Duration) (string, error) {
@@ -275,6 +276,9 @@ func (f *fakeObjectStorage) PresignDownload(ctx context.Context, fileKey string,
 }
 func (f *fakeObjectStorage) DeleteObject(ctx context.Context, fileKey string) error {
 	return f.deleteObjectFn(ctx, fileKey)
+}
+func (f *fakeObjectStorage) DownloadObject(ctx context.Context, fileKey string) ([]byte, error) {
+	return f.downloadObjectFn(ctx, fileKey)
 }
 
 type fakeStockItemRepo struct {

@@ -18,6 +18,10 @@ export function DocumentTemplateFormModal({ existingTemplate, onClose, onSaved }
   const [type, setType] = useState<DocumentTemplateType>((existingTemplate?.type as DocumentTemplateType) ?? 'ATESTADO')
   const [content, setContent] = useState(existingTemplate?.content ?? '')
   const [isActive, setIsActive] = useState(existingTemplate?.is_active ?? true)
+  const [includeHeader, setIncludeHeader] = useState(existingTemplate?.include_header ?? true)
+  const [includeFooter, setIncludeFooter] = useState(existingTemplate?.include_footer ?? true)
+  const [includeSignature, setIncludeSignature] = useState(existingTemplate?.include_signature ?? true)
+  const [includeStamp, setIncludeStamp] = useState(existingTemplate?.include_stamp ?? true)
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
@@ -30,7 +34,16 @@ export function DocumentTemplateFormModal({ existingTemplate, onClose, onSaved }
     }
     setSubmitting(true)
     try {
-      const body = { name, type, content, is_active: isActive }
+      const body = {
+        name,
+        type,
+        content,
+        is_active: isActive,
+        include_header: includeHeader,
+        include_footer: includeFooter,
+        include_signature: includeSignature,
+        include_stamp: includeStamp,
+      }
       const tmpl = isEditing
         ? await apiFetch<DocumentTemplateDTO>(`/api/document-templates/${existingTemplate.id}`, {
             method: 'PUT',
@@ -89,6 +102,32 @@ export function DocumentTemplateFormModal({ existingTemplate, onClose, onSaved }
             Use {'{{patient_name}}'}, {'{{professional_name}}'} e {'{{date}}'} — preenchidos automaticamente — ou
             crie suas próprias tags (ex: {'{{cid}}'}), preenchidas na hora de gerar o documento.
           </p>
+        </div>
+
+        <div className="space-y-2 rounded-lg border border-slate-200 p-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-brand-text-muted">
+            Layout do PDF
+          </p>
+          <label className="flex items-center gap-2 text-sm text-brand-text">
+            <input type="checkbox" checked={includeHeader} onChange={(e) => setIncludeHeader(e.target.checked)} />
+            Incluir cabeçalho (papel timbrado: logotipo, nome, CNPJ/CPF e endereço da clínica)
+          </label>
+          <label className="flex items-center gap-2 text-sm text-brand-text">
+            <input type="checkbox" checked={includeFooter} onChange={(e) => setIncludeFooter(e.target.checked)} />
+            Incluir rodapé (telefone e e-mail da clínica)
+          </label>
+          <label className="flex items-center gap-2 text-sm text-brand-text">
+            <input
+              type="checkbox"
+              checked={includeSignature}
+              onChange={(e) => setIncludeSignature(e.target.checked)}
+            />
+            Incluir bloco de assinatura (cidade, data e linha para assinatura física)
+          </label>
+          <label className="flex items-center gap-2 text-sm text-brand-text">
+            <input type="checkbox" checked={includeStamp} onChange={(e) => setIncludeStamp(e.target.checked)} />
+            Incluir carimbo (nome e registro do profissional, abaixo da assinatura)
+          </label>
         </div>
 
         {isEditing && (

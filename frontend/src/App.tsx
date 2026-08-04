@@ -12,6 +12,7 @@ import { FinancialPage } from './pages/FinancialPage'
 import { DocumentTemplatesPage } from './pages/DocumentTemplatesPage'
 import { UsersPage } from './pages/UsersPage'
 import { EstoquePage } from './pages/EstoquePage'
+import { ConfiguracoesPage } from './pages/ConfiguracoesPage'
 
 function App() {
   return (
@@ -31,6 +32,7 @@ function App() {
               <Route path="documentos" element={<DocumentTemplatesPage />} />
               <Route path="usuarios" element={<UsersPage />} />
               <Route path="estoque" element={<EstoquePage />} />
+              <Route path="configuracoes" element={<ConfiguracoesPage />} />
             </Route>
           </Route>
         </Routes>

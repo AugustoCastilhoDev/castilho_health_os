@@ -76,12 +76,34 @@ func resolvePlaceholders(content string, vars map[string]string) string {
 	})
 }
 
+// DocumentBranding is the letterhead data Generate can't resolve itself —
+// it needs the Tenant/User repositories the handler already has access to
+// (patient/professional lookups happen there, see DocumentTemplateHandler.
+// Generate). The template's own IncludeHeader/Footer/Signature/Stamp flags
+// are not part of this struct — Generate reads those off tmpl directly,
+// since the caller only supplies raw facts, never layout decisions.
+type DocumentBranding struct {
+	ClinicName     string
+	ClinicDocument string
+	ClinicAddress  string
+	ClinicPhone    string
+	ClinicEmail    string
+	LogoBytes      []byte
+	LogoMimeType   string
+	SignatureCity  string
+	SignatureDate  string
+
+	ProfessionalName         string
+	ProfessionalRegistration string
+}
+
 // Generate resolves an active template's placeholders against vars and
-// renders the result to PDF bytes. Resolving vars from a specific
-// patient/professional/appointment is the caller's job (it needs
-// repositories this service doesn't own) — this only does template lookup,
-// substitution and rendering.
-func (s *DocumentTemplateService) Generate(ctx context.Context, tenantID, templateID uuid.UUID, vars map[string]string) ([]byte, *models.DocumentTemplate, error) {
+// renders the result to PDF bytes, wrapped in whichever letterhead blocks
+// the template itself has enabled. Resolving vars/branding from a specific
+// patient/professional/tenant is the caller's job (it needs repositories
+// this service doesn't own) — this only does template lookup, substitution,
+// merging the template's own layout flags onto branding, and rendering.
+func (s *DocumentTemplateService) Generate(ctx context.Context, tenantID, templateID uuid.UUID, vars map[string]string, branding DocumentBranding) ([]byte, *models.DocumentTemplate, error) {
 	tmpl, err := s.templates.FindByID(ctx, tenantID, templateID)
 	if err != nil {
 		return nil, nil, err
@@ -90,7 +112,27 @@ func (s *DocumentTemplateService) Generate(ctx context.Context, tenantID, templa
 		return nil, nil, fmt.Errorf("%w: template is inactive", ErrValidation)
 	}
 	body := resolvePlaceholders(tmpl.Content, vars)
-	pdfBytes, err := pdf.Render(tmpl.Name, body)
+	opts := pdf.RenderOptions{
+		IncludeHeader:    tmpl.IncludeHeader,
+		IncludeFooter:    tmpl.IncludeFooter,
+		IncludeSignature: tmpl.IncludeSignature,
+		IncludeStamp:     tmpl.IncludeStamp,
+
+		ClinicName:     branding.ClinicName,
+		ClinicDocument: branding.ClinicDocument,
+		ClinicAddress:  branding.ClinicAddress,
+		ClinicPhone:    branding.ClinicPhone,
+		ClinicEmail:    branding.ClinicEmail,
+		LogoBytes:      branding.LogoBytes,
+		LogoMimeType:   branding.LogoMimeType,
+
+		SignatureCity: branding.SignatureCity,
+		SignatureDate: branding.SignatureDate,
+
+		ProfessionalName:         branding.ProfessionalName,
+		ProfessionalRegistration: branding.ProfessionalRegistration,
+	}
+	pdfBytes, err := pdf.Render(tmpl.Name, body, opts)
 	if err != nil {
 		return nil, nil, err
 	}

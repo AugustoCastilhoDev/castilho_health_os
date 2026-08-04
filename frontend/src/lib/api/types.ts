@@ -11,6 +11,11 @@ export interface TenantDTO {
   email: string
   phone: string
   is_active: boolean
+  address_street?: string
+  address_city?: string
+  address_state?: string
+  address_zip?: string
+  logo_key?: string
 }
 
 export interface UserDTO {
@@ -126,6 +131,10 @@ export interface DocumentTemplateDTO {
   type: string
   content: string
   is_active: boolean
+  include_header: boolean
+  include_footer: boolean
+  include_signature: boolean
+  include_stamp: boolean
 }
 
 export interface PatientDocumentDTO {

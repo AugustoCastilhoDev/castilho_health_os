@@ -1,5 +1,5 @@
 import { Link, NavLink } from 'react-router-dom'
-import { Activity, Calendar, LogOut, Users, Wallet, Package, FileText, UserCog } from 'lucide-react'
+import { Activity, Calendar, LogOut, Users, Wallet, Package, FileText, UserCog, Settings } from 'lucide-react'
 
 interface SidebarProps {
   clinicName: string
@@ -56,6 +56,12 @@ export function Sidebar({ clinicName, isAdmin, onLogout }: SidebarProps) {
           <NavLink to="/usuarios" className={({ isActive }) => navLinkClass(isActive)}>
             <UserCog size={18} />
             Usuários
+          </NavLink>
+        )}
+        {isAdmin && (
+          <NavLink to="/configuracoes" className={({ isActive }) => navLinkClass(isActive)}>
+            <Settings size={18} />
+            Configurações
           </NavLink>
         )}
       </nav>
