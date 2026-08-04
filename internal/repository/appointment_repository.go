@@ -22,8 +22,11 @@ type AppointmentRepository interface {
 	// validates the move against models.AppointmentStatus.CanTransitionTo,
 	// updates the denormalized timestamp for the new state, and appends an
 	// AppointmentStatusLog row — all inside one transaction, so the audit
-	// trail can never drift from the appointment's actual status.
-	TransitionStatus(ctx context.Context, tenantID, id uuid.UUID, to models.AppointmentStatus, changedByID uuid.UUID, reason string) (*models.Appointment, error)
+	// trail can never drift from the appointment's actual status. cid is
+	// optional (empty string means "leave whatever CID is already there
+	// untouched") — set when completing an encounter, but not required by
+	// any particular status.
+	TransitionStatus(ctx context.Context, tenantID, id uuid.UUID, to models.AppointmentStatus, changedByID uuid.UUID, reason, cid string) (*models.Appointment, error)
 }
 
 type appointmentRepository struct {
@@ -80,7 +83,7 @@ func (r *appointmentRepository) ListByPatient(ctx context.Context, tenantID, pat
 	return appts, nil
 }
 
-func (r *appointmentRepository) TransitionStatus(ctx context.Context, tenantID, id uuid.UUID, to models.AppointmentStatus, changedByID uuid.UUID, reason string) (*models.Appointment, error) {
+func (r *appointmentRepository) TransitionStatus(ctx context.Context, tenantID, id uuid.UUID, to models.AppointmentStatus, changedByID uuid.UUID, reason, cid string) (*models.Appointment, error) {
 	var result models.Appointment
 
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
@@ -115,6 +118,9 @@ func (r *appointmentRepository) TransitionStatus(ctx context.Context, tenantID, 
 			appt.CancellationReason = reason
 		case models.StatusNoShow:
 			appt.NoShowAt = &now
+		}
+		if cid != "" {
+			appt.CID = &cid
 		}
 
 		if err := tx.Model(&models.Appointment{}).

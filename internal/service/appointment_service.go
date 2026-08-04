@@ -48,7 +48,7 @@ func (s *AppointmentService) ListByPatient(ctx context.Context, tenantID, patien
 // it just forwards to the repository, whose transaction enforces the state
 // machine and writes the audit log — this layer only owns input shape
 // validation (unknown status, cancel without a reason).
-func (s *AppointmentService) Transition(ctx context.Context, tenantID, id uuid.UUID, to models.AppointmentStatus, changedByID uuid.UUID, reason string) (*models.Appointment, error) {
+func (s *AppointmentService) Transition(ctx context.Context, tenantID, id uuid.UUID, to models.AppointmentStatus, changedByID uuid.UUID, reason, cid string) (*models.Appointment, error) {
 	switch to {
 	case models.StatusScheduled, models.StatusConfirmed, models.StatusCancelled, models.StatusWaiting, models.StatusInProgress, models.StatusCompleted, models.StatusNoShow:
 	default:
@@ -57,5 +57,5 @@ func (s *AppointmentService) Transition(ctx context.Context, tenantID, id uuid.U
 	if to == models.StatusCancelled && reason == "" {
 		return nil, fmt.Errorf("%w: reason is required to cancel an appointment", ErrValidation)
 	}
-	return s.appointments.TransitionStatus(ctx, tenantID, id, to, changedByID, reason)
+	return s.appointments.TransitionStatus(ctx, tenantID, id, to, changedByID, reason, cid)
 }

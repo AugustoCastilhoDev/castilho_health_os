@@ -16,19 +16,21 @@ interface AppointmentDetailModalProps {
 export function AppointmentDetailModal({ appointment, onClose, onUpdated }: AppointmentDetailModalProps) {
   const { apiFetch } = useAuth()
   const [pendingCancel, setPendingCancel] = useState(false)
+  const [pendingComplete, setPendingComplete] = useState(false)
   const [reason, setReason] = useState('')
+  const [cid, setCid] = useState(appointment.cid ?? '')
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
   const nextStatuses = APPOINTMENT_NEXT_STATUSES[appointment.status]
 
-  async function transition(to: AppointmentStatus, transitionReason = '') {
+  async function transition(to: AppointmentStatus, transitionReason = '', transitionCid = '') {
     setError(null)
     setSubmitting(true)
     try {
       await apiFetch(`/api/appointments/${appointment.id}/transition`, {
         method: 'POST',
-        body: JSON.stringify({ to, reason: transitionReason }),
+        body: JSON.stringify({ to, reason: transitionReason, cid: transitionCid }),
       })
       onUpdated()
     } catch (err) {
@@ -78,6 +80,33 @@ export function AppointmentDetailModal({ appointment, onClose, onUpdated }: Appo
               </button>
             </div>
           </div>
+        ) : pendingComplete ? (
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-brand-text">CID (opcional)</label>
+            <input
+              value={cid}
+              onChange={(e) => setCid(e.target.value)}
+              placeholder="Ex: F41.1 - Transtorno de ansiedade generalizada"
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-action focus:outline-none focus:ring-1 focus:ring-brand-action"
+            />
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setPendingComplete(false)}
+                className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm text-brand-text hover:bg-slate-50"
+              >
+                Voltar
+              </button>
+              <button
+                type="button"
+                disabled={submitting}
+                onClick={() => transition('COMPLETED', '', cid.trim())}
+                className="flex-1 rounded-lg bg-brand-action px-3 py-2 text-sm font-semibold text-white hover:bg-brand-action-hover disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Confirmar conclusão
+              </button>
+            </div>
+          </div>
         ) : (
           nextStatuses.length > 0 && (
             <div className="flex flex-wrap gap-2">
@@ -86,7 +115,11 @@ export function AppointmentDetailModal({ appointment, onClose, onUpdated }: Appo
                   key={status}
                   type="button"
                   disabled={submitting}
-                  onClick={() => (status === 'CANCELLED' ? setPendingCancel(true) : transition(status))}
+                  onClick={() => {
+                    if (status === 'CANCELLED') setPendingCancel(true)
+                    else if (status === 'COMPLETED') setPendingComplete(true)
+                    else transition(status)
+                  }}
                   className={
                     status === 'CANCELLED'
                       ? 'rounded-lg border border-rose-200 px-3 py-2 text-sm font-medium text-brand-alert-text hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60'

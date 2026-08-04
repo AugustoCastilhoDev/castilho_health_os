@@ -23,6 +23,7 @@ type medicalRecordRequest struct {
 	AppointmentID  *uuid.UUID `json:"appointment_id"`
 	Type           string     `json:"type"`
 	Content        string     `json:"content"`
+	CID            *string    `json:"cid"`
 }
 
 func (r medicalRecordRequest) toModel() *models.MedicalRecord {
@@ -32,6 +33,7 @@ func (r medicalRecordRequest) toModel() *models.MedicalRecord {
 		AppointmentID:  r.AppointmentID,
 		Type:           models.MedicalRecordType(r.Type),
 		Content:        r.Content,
+		CID:            r.CID,
 	}
 }
 
@@ -71,7 +73,7 @@ func (h *MedicalRecordHandler) ListByPatient(c *fiber.Ctx) error {
 	return c.JSON(records)
 }
 
-// Update only lets the caller change Type/Content — see
+// Update only lets the caller change Type/Content/CID — see
 // MedicalRecordService.Update — so patient_id/professional_id/appointment_id
 // in the body are accepted but silently ignored, same as PUT /patients/:id
 // ignoring an id in the body.

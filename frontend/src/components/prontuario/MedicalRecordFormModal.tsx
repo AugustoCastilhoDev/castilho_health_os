@@ -3,7 +3,7 @@ import { Modal } from '../common/Modal'
 import { RichTextEditor } from '../common/RichTextEditor'
 import { useAuth } from '../../lib/auth/AuthContext'
 import { ApiError } from '../../lib/api/client'
-import { RECORD_TYPE_LABEL, type MedicalRecordType } from '../../lib/medicalRecord'
+import { DEFAULT_RECORD_TYPE_BY_ROLE, RECORD_TYPE_LABEL, type MedicalRecordType } from '../../lib/medicalRecord'
 import type { MedicalRecordDTO } from '../../lib/api/types'
 
 // An empty Tiptap doc serializes to "<p></p>", not "" — strip tags before
@@ -16,6 +16,7 @@ function isHtmlContentEmpty(html: string): boolean {
 interface MedicalRecordFormModalProps {
   patientId: string
   professionalId: string
+  professionalRole: string
   existingRecord?: MedicalRecordDTO
   onClose: () => void
   onSaved: (record: MedicalRecordDTO) => void
@@ -24,14 +25,18 @@ interface MedicalRecordFormModalProps {
 export function MedicalRecordFormModal({
   patientId,
   professionalId,
+  professionalRole,
   existingRecord,
   onClose,
   onSaved,
 }: MedicalRecordFormModalProps) {
   const { apiFetch } = useAuth()
   const isEditing = !!existingRecord
-  const [type, setType] = useState<MedicalRecordType>((existingRecord?.type as MedicalRecordType) ?? 'MEDICA')
+  const [type, setType] = useState<MedicalRecordType>(
+    (existingRecord?.type as MedicalRecordType) ?? DEFAULT_RECORD_TYPE_BY_ROLE[professionalRole] ?? 'MEDICA',
+  )
   const [content, setContent] = useState(existingRecord?.content ?? '')
+  const [cid, setCid] = useState(existingRecord?.cid ?? '')
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
@@ -47,11 +52,17 @@ export function MedicalRecordFormModal({
       const record = isEditing
         ? await apiFetch<MedicalRecordDTO>(`/api/medical-records/${existingRecord.id}`, {
             method: 'PUT',
-            body: JSON.stringify({ type, content }),
+            body: JSON.stringify({ type, content, cid: cid.trim() || null }),
           })
         : await apiFetch<MedicalRecordDTO>('/api/medical-records/', {
             method: 'POST',
-            body: JSON.stringify({ patient_id: patientId, professional_id: professionalId, type, content }),
+            body: JSON.stringify({
+              patient_id: patientId,
+              professional_id: professionalId,
+              type,
+              content,
+              cid: cid.trim() || null,
+            }),
           })
       onSaved(record)
     } catch (err) {
@@ -77,6 +88,16 @@ export function MedicalRecordFormModal({
               </option>
             ))}
           </select>
+        </div>
+
+        <div>
+          <label className="mb-1 block text-sm font-medium text-brand-text">CID (opcional)</label>
+          <input
+            value={cid}
+            onChange={(e) => setCid(e.target.value)}
+            placeholder="Ex: F41.1 - Transtorno de ansiedade generalizada"
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-action focus:outline-none focus:ring-1 focus:ring-brand-action"
+          />
         </div>
 
         <div>

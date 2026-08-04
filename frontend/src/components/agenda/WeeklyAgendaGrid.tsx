@@ -7,6 +7,7 @@ export interface AgendaAppointment {
   scheduledAt: Date
   durationMin: number
   status: AppointmentStatus
+  cid?: string
 }
 
 interface WeeklyAgendaGridProps {

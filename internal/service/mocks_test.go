@@ -98,7 +98,7 @@ type fakeAppointmentRepo struct {
 	findFn               func(ctx context.Context, tenantID, id uuid.UUID) (*models.Appointment, error)
 	listByProfessionalFn func(ctx context.Context, tenantID, professionalID uuid.UUID, from, to time.Time) ([]models.Appointment, error)
 	listByPatientFn      func(ctx context.Context, tenantID, patientID uuid.UUID) ([]models.Appointment, error)
-	transitionFn         func(ctx context.Context, tenantID, id uuid.UUID, to models.AppointmentStatus, changedByID uuid.UUID, reason string) (*models.Appointment, error)
+	transitionFn         func(ctx context.Context, tenantID, id uuid.UUID, to models.AppointmentStatus, changedByID uuid.UUID, reason, cid string) (*models.Appointment, error)
 }
 
 func (f *fakeAppointmentRepo) Create(ctx context.Context, tenantID uuid.UUID, a *models.Appointment) error {
@@ -113,8 +113,8 @@ func (f *fakeAppointmentRepo) ListByProfessional(ctx context.Context, tenantID, 
 func (f *fakeAppointmentRepo) ListByPatient(ctx context.Context, tenantID, patientID uuid.UUID) ([]models.Appointment, error) {
 	return f.listByPatientFn(ctx, tenantID, patientID)
 }
-func (f *fakeAppointmentRepo) TransitionStatus(ctx context.Context, tenantID, id uuid.UUID, to models.AppointmentStatus, changedByID uuid.UUID, reason string) (*models.Appointment, error) {
-	return f.transitionFn(ctx, tenantID, id, to, changedByID, reason)
+func (f *fakeAppointmentRepo) TransitionStatus(ctx context.Context, tenantID, id uuid.UUID, to models.AppointmentStatus, changedByID uuid.UUID, reason, cid string) (*models.Appointment, error) {
+	return f.transitionFn(ctx, tenantID, id, to, changedByID, reason, cid)
 }
 
 type fakeFinancialRuleRepo struct {

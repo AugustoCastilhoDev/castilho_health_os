@@ -13,8 +13,9 @@ import { ApiError } from '../lib/api/client'
 import type { AppointmentDTO, MedicalRecordDTO, PatientDTO, UserDTO } from '../lib/api/types'
 import type { AppointmentStatus } from '../lib/appointmentStatus'
 import type { MedicalRecordType } from '../lib/medicalRecord'
+import { HEALTH_PROFESSIONAL_ROLES } from '../lib/roles'
 
-const CAN_WRITE_RECORDS_ROLES = new Set(['DOCTOR', 'DENTIST'])
+const CAN_WRITE_RECORDS_ROLES = HEALTH_PROFESSIONAL_ROLES
 
 export function PatientRecordPage() {
   const { patientId } = useParams<{ patientId: string }>()
@@ -70,6 +71,7 @@ export function PatientRecordPage() {
           professionalName: nameByProfessionalId.get(r.professional_id) ?? 'Profissional',
           type: r.type as MedicalRecordType,
           content: r.content,
+          cid: r.cid,
           isLocked: r.is_locked,
           onEdit: canWriteRecords ? () => setEditingRecord(r) : undefined,
           onLock: canWriteRecords ? () => handleLock(r.id) : undefined,
@@ -211,6 +213,7 @@ export function PatientRecordPage() {
         <MedicalRecordFormModal
           patientId={patient.id}
           professionalId={user.id}
+          professionalRole={user.role}
           existingRecord={editingRecord === 'new' ? undefined : editingRecord}
           onClose={() => setEditingRecord(null)}
           onSaved={() => {

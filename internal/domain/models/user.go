@@ -25,12 +25,23 @@ const (
 	RoleDentist      UserRole = "DENTIST"
 	RoleReceptionist UserRole = "RECEPTIONIST"
 	RoleFinance      UserRole = "FINANCE"
+	RolePsychologist UserRole = "PSYCHOLOGIST"
+	RolePsychiatrist UserRole = "PSYCHIATRIST"
 )
 
 // IsHealthProfessional reports whether this role can be the ProfessionalID
 // on an Appointment / FinancialRule.
 func (r UserRole) IsHealthProfessional() bool {
-	return r == RoleDoctor || r == RoleDentist
+	return r == RoleDoctor || r == RoleDentist || r == RolePsychologist || r == RolePsychiatrist
+}
+
+// CanPrescribe reports whether this role legally holds a prescribing
+// council registration (CRM/CRO) and may issue a prescription via Memed.
+// PSYCHOLOGIST is a health professional (IsHealthProfessional) but is not a
+// prescriber — psicólogos are a distinct profession in Brazil (CRP), unlike
+// psiquiatras, who are physicians (CRM) same as any other DOCTOR.
+func (r UserRole) CanPrescribe() bool {
+	return r == RoleDoctor || r == RoleDentist || r == RolePsychiatrist
 }
 
 // User represents any person who logs in: health professionals (doctors,
@@ -46,16 +57,19 @@ type User struct {
 	Role         UserRole `gorm:"type:varchar(20);not null;index" json:"role"`
 	IsActive     bool     `gorm:"not null;default:true" json:"is_active"`
 
-	// Professional council registration. Populated only when Role is
-	// DOCTOR/DENTIST; nil otherwise.
-	CouncilType   *string `gorm:"type:varchar(10)" json:"council_type,omitempty"` // "CRM" | "CRO"
+	// Professional council registration. Populated only when
+	// Role.IsHealthProfessional(); nil otherwise.
+	CouncilType   *string `gorm:"type:varchar(10)" json:"council_type,omitempty"` // "CRM" | "CRO" | "CRP"
 	CouncilNumber *string `gorm:"type:varchar(20)" json:"council_number,omitempty"`
 	CouncilState  *string `gorm:"type:varchar(2)" json:"council_state,omitempty"`
 
 	// CPF and BirthDate are mandatory fields on Memed's prescriber
-	// registration API; Phone/Sex are optional there. All nil until an
-	// admin fills them in for a DOCTOR/DENTIST who will issue prescriptions
-	// — nothing else in the app reads these yet.
+	// registration API (only relevant for a CanPrescribe role); Phone/Sex
+	// are optional there. All nil until an admin fills them in for a health
+	// professional — kept available to every IsHealthProfessional role
+	// (including PSYCHOLOGIST, who never calls Memed) since council
+	// registration is general professional record-keeping, not solely a
+	// Memed prerequisite.
 	CPF       *string    `gorm:"type:varchar(11)" json:"cpf,omitempty"`
 	BirthDate *time.Time `json:"birth_date,omitempty"`
 	Sex       *UserSex   `gorm:"type:varchar(1)" json:"sex,omitempty"`

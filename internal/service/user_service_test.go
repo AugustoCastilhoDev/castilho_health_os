@@ -28,6 +28,32 @@ func TestUserService_Create_RejectsShortPassword(t *testing.T) {
 	require.ErrorIs(t, err, service.ErrValidation)
 }
 
+// Regression guard: validRole() in user_service.go is a second, independent
+// list of allowed roles (separate from UserRole.IsHealthProfessional()) —
+// caught live during manual verification that adding PSYCHOLOGIST/
+// PSYCHIATRIST to the model without also updating this switch left them
+// rejected with "unknown role" at creation time.
+func TestUserService_Create_AcceptsNewHealthProfessionalRoles(t *testing.T) {
+	for _, role := range []models.UserRole{models.RolePsychologist, models.RolePsychiatrist} {
+		t.Run(string(role), func(t *testing.T) {
+			repo := &fakeUserRepo{
+				findByEmailFn: func(ctx context.Context, tenantID uuid.UUID, email string) (*models.User, error) {
+					return nil, repository.ErrNotFound
+				},
+				createFn: func(ctx context.Context, tenantID uuid.UUID, u *models.User) error {
+					return nil
+				},
+			}
+			svc := service.NewUserService(repo)
+
+			_, err := svc.Create(context.Background(), uuid.New(), service.CreateUserInput{
+				Name: "X", Email: "x@example.com", Password: "longenough1", Role: role,
+			})
+			require.NoError(t, err)
+		})
+	}
+}
+
 func TestUserService_Create_RejectsDuplicateEmail(t *testing.T) {
 	repo := &fakeUserRepo{
 		findByEmailFn: func(ctx context.Context, tenantID uuid.UUID, email string) (*models.User, error) {

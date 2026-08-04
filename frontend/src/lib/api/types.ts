@@ -58,6 +58,7 @@ export interface AppointmentDTO {
   cancelled_at?: string
   no_show_at?: string
   cancellation_reason?: string
+  cid?: string
 }
 
 export interface FinancialTransactionDTO {
@@ -112,6 +113,7 @@ export interface MedicalRecordDTO {
   appointment_id?: string
   type: string
   content: string
+  cid?: string
   is_locked: boolean
   locked_at?: string
   locked_by_id?: string

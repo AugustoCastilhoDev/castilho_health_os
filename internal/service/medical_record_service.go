@@ -51,8 +51,8 @@ func (s *MedicalRecordService) ListByPatient(ctx context.Context, tenantID, pati
 	return s.records.ListByPatient(ctx, tenantID, patientID)
 }
 
-// Update leaves PatientID/ProfessionalID/AppointmentID alone — only Type and
-// Content are editable after creation — and relies entirely on the
+// Update leaves PatientID/ProfessionalID/AppointmentID alone — only
+// Type/Content/CID are editable after creation — and relies entirely on the
 // repository's is_locked-guarded WHERE clause to enforce immutability once
 // locked, rather than re-checking IsLocked here (a check-then-act gap here
 // could race with a concurrent Lock call the same way it would in SQL).

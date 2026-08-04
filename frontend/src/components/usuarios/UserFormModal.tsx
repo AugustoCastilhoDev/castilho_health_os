@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { Modal } from '../common/Modal'
 import { useAuth } from '../../lib/auth/AuthContext'
 import { ApiError } from '../../lib/api/client'
-import { ROLE_LABEL } from '../../lib/roles'
+import { DEFAULT_COUNCIL_TYPE_BY_ROLE, HEALTH_PROFESSIONAL_ROLES, ROLE_LABEL } from '../../lib/roles'
 import type { UserDTO } from '../../lib/api/types'
 
 interface UserFormModalProps {
@@ -12,7 +12,7 @@ interface UserFormModalProps {
 }
 
 function isHealthProfessionalRole(role: string): boolean {
-  return role === 'DOCTOR' || role === 'DENTIST'
+  return HEALTH_PROFESSIONAL_ROLES.has(role)
 }
 
 export function UserFormModal({ existingUser, onClose, onSaved }: UserFormModalProps) {
@@ -112,7 +112,16 @@ export function UserFormModal({ existingUser, onClose, onSaved }: UserFormModalP
             <label className="mb-1 block text-sm font-medium text-brand-text">Papel</label>
             <select
               value={role}
-              onChange={(e) => setRole(e.target.value)}
+              onChange={(e) => {
+                const nextRole = e.target.value
+                setRole(nextRole)
+                // Pre-fill (not lock) the council type for the newly picked
+                // role — psiquiatra defaults to CRM (same as médico),
+                // psicólogo to CRP; still freely editable below.
+                if (DEFAULT_COUNCIL_TYPE_BY_ROLE[nextRole]) {
+                  setCouncilType(DEFAULT_COUNCIL_TYPE_BY_ROLE[nextRole])
+                }
+              }}
               className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-action focus:outline-none focus:ring-1 focus:ring-brand-action"
             >
               {Object.entries(ROLE_LABEL).map(([value, label]) => (
@@ -140,7 +149,7 @@ export function UserFormModal({ existingUser, onClose, onSaved }: UserFormModalP
         {isProfessional && (
           <div className="space-y-3 rounded-lg border border-slate-200 p-3">
             <p className="text-xs font-semibold uppercase tracking-wide text-brand-text-muted">
-              Dados do profissional (necessários para emissão de receita digital)
+              Dados do profissional (registro no conselho e, quando aplicável, emissão de receita digital)
             </p>
             <div className="grid grid-cols-3 gap-3">
               <div>
@@ -152,6 +161,7 @@ export function UserFormModal({ existingUser, onClose, onSaved }: UserFormModalP
                 >
                   <option value="CRM">CRM</option>
                   <option value="CRO">CRO</option>
+                  <option value="CRP">CRP</option>
                 </select>
               </div>
               <div>

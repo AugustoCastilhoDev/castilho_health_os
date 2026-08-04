@@ -95,6 +95,7 @@ func (h *AppointmentHandler) ListByPatient(c *fiber.Ctx) error {
 type transitionRequest struct {
 	To     string `json:"to"`
 	Reason string `json:"reason"`
+	CID    string `json:"cid"`
 }
 
 func (h *AppointmentHandler) Transition(c *fiber.Ctx) error {
@@ -114,6 +115,7 @@ func (h *AppointmentHandler) Transition(c *fiber.Ctx) error {
 		models.AppointmentStatus(req.To),
 		appmiddleware.UserID(c),
 		req.Reason,
+		req.CID,
 	)
 	if err != nil {
 		return respondErr(c, err)

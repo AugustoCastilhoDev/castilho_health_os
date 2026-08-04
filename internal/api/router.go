@@ -51,7 +51,14 @@ func RegisterRoutes(app *fiber.App, h *Handlers, issuer *auth.JWTIssuer, healthC
 	frontDesk := middleware.RequireRole(models.RoleTenantAdmin, models.RoleReceptionist)
 	admin := middleware.RequireRole(models.RoleTenantAdmin)
 	finance := middleware.RequireRole(models.RoleTenantAdmin, models.RoleFinance)
-	health := middleware.RequireRole(models.RoleDoctor, models.RoleDentist)
+	// health gates writing a clinical note (MedicalRecord) — every
+	// IsHealthProfessional role, since a psicólogo/psiquiatra writes
+	// evoluções same as a médico/dentista.
+	health := middleware.RequireRole(models.RoleDoctor, models.RoleDentist, models.RolePsychologist, models.RolePsychiatrist)
+	// prescribers is narrower than health: only roles with a prescribing
+	// council registration (CanPrescribe) may touch Memed — a PSYCHOLOGIST
+	// writes clinical notes but cannot issue a prescription.
+	prescribers := middleware.RequireRole(models.RoleDoctor, models.RoleDentist, models.RolePsychiatrist)
 	dentist := middleware.RequireRole(models.RoleDentist)
 
 	// Get/List are open to any authenticated role (they back "pick a
@@ -82,10 +89,10 @@ func RegisterRoutes(app *fiber.App, h *Handlers, issuer *auth.JWTIssuer, healthC
 	patients.Post("/:patientID/documents/upload-url", h.PatientDocument.CreateUploadURL)
 	patients.Post("/:patientID/documents", h.PatientDocument.Create)
 	patients.Get("/:patientID/documents", h.PatientDocument.ListByPatient)
-	// Issuing a prescription is health-professional-only, same as writing a
-	// medical record; reading the audit trail is open like the rest of the
-	// patient record.
-	patients.Post("/:patientID/memed-prescriptions", health, h.Memed.CreatePrescriptionLog)
+	// Issuing a prescription is prescribers-only (narrower than health —
+	// PSYCHOLOGIST writes medical records but can't prescribe); reading the
+	// audit trail is open like the rest of the patient record.
+	patients.Post("/:patientID/memed-prescriptions", prescribers, h.Memed.CreatePrescriptionLog)
 	patients.Get("/:patientID/memed-prescriptions", h.Memed.ListByPatient)
 	// Odontograma: reading the chart/history stays open like the rest of the
 	// patient record; recording a finding/procedure is dentist-only rather
@@ -152,10 +159,10 @@ func RegisterRoutes(app *fiber.App, h *Handlers, issuer *auth.JWTIssuer, healthC
 	patientDocuments.Delete("/:id", admin, h.PatientDocument.Delete)
 
 	// GetPrescriberToken is what the frontend calls to load Memed's own
-	// widget for the current professional — health-professional-only since
-	// only DOCTOR/DENTIST issue prescriptions.
-	protected.Get("/memed/token", health, h.Memed.GetPrescriberToken)
-	protected.Post("/memed-prescriptions/:memedPrescriptionID/cancel", health, h.Memed.Cancel)
+	// widget for the current professional — prescribers-only since only a
+	// CanPrescribe role issues a prescription.
+	protected.Get("/memed/token", prescribers, h.Memed.GetPrescriberToken)
+	protected.Post("/memed-prescriptions/:memedPrescriptionID/cancel", prescribers, h.Memed.Cancel)
 
 	// Estoque: managing items/quantities is front-desk work (same group
 	// that registers a patient payment), same reasoning as FinancialRule

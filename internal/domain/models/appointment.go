@@ -71,6 +71,14 @@ type Appointment struct {
 
 	CancellationReason string `gorm:"type:text" json:"cancellation_reason,omitempty"`
 
+	// CID mirrors MedicalRecord.CID — same free-text, unvalidated diagnosis
+	// code — kept on the appointment itself (not only on a linked
+	// MedicalRecord) so a future insurance/TISS billing integration can read
+	// it per encounter without joining through the prontuário. Set via
+	// TransitionStatus (typically when moving to COMPLETED); left untouched
+	// on transitions where no cid is supplied.
+	CID *string `gorm:"column:cid;type:varchar(255)" json:"cid,omitempty"`
+
 	StatusLogs []AppointmentStatusLog `gorm:"foreignKey:AppointmentID" json:"-"`
 }
 

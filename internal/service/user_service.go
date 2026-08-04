@@ -23,7 +23,8 @@ func NewUserService(users repository.UserRepository) *UserService {
 
 func validRole(role models.UserRole) bool {
 	switch role {
-	case models.RoleTenantAdmin, models.RoleDoctor, models.RoleDentist, models.RoleReceptionist, models.RoleFinance:
+	case models.RoleTenantAdmin, models.RoleDoctor, models.RoleDentist, models.RoleReceptionist, models.RoleFinance,
+		models.RolePsychologist, models.RolePsychiatrist:
 		return true
 	default:
 		return false

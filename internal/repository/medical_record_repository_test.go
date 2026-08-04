@@ -78,6 +78,36 @@ func TestMedicalRecordRepository_UpdateRejectedOnceLocked(t *testing.T) {
 	assert.Equal(t, "rascunho revisado", stillLocked.Content)
 }
 
+func TestMedicalRecordRepository_UpdatePersistsCID(t *testing.T) {
+	gdb := testutil.ConnectDB(t)
+	tenant := testutil.NewTenant(t, gdb)
+	doctor := testutil.NewUser(t, gdb, tenant.ID, models.RolePsychiatrist)
+	patient := testutil.NewPatient(t, gdb, tenant.ID)
+	repo := repository.NewMedicalRecordRepository(gdb)
+	ctx := context.Background()
+
+	record := &models.MedicalRecord{
+		PatientID:      patient.ID,
+		ProfessionalID: doctor.ID,
+		Type:           models.RecordTypePsychiatry,
+		Content:        "Avaliação inicial.",
+	}
+	require.NoError(t, repo.Create(ctx, tenant.ID, record))
+
+	found, err := repo.FindByID(ctx, tenant.ID, record.ID)
+	require.NoError(t, err)
+	assert.Nil(t, found.CID, "cid must be nil when not provided")
+
+	cid := "F41.1 - Transtorno de ansiedade generalizada"
+	record.CID = &cid
+	require.NoError(t, repo.Update(ctx, tenant.ID, record))
+
+	updated, err := repo.FindByID(ctx, tenant.ID, record.ID)
+	require.NoError(t, err)
+	require.NotNil(t, updated.CID)
+	assert.Equal(t, cid, *updated.CID)
+}
+
 func TestMedicalRecordRepository_LockIsIdempotent(t *testing.T) {
 	gdb := testutil.ConnectDB(t)
 	tenant := testutil.NewTenant(t, gdb)

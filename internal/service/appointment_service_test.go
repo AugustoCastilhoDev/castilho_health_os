@@ -52,7 +52,7 @@ func TestAppointmentService_Transition_RejectsUnknownStatus(t *testing.T) {
 	repo := &fakeAppointmentRepo{}
 	svc := service.NewAppointmentService(repo)
 
-	_, err := svc.Transition(context.Background(), uuid.New(), uuid.New(), models.AppointmentStatus("NOT_A_REAL_STATUS"), uuid.New(), "")
+	_, err := svc.Transition(context.Background(), uuid.New(), uuid.New(), models.AppointmentStatus("NOT_A_REAL_STATUS"), uuid.New(), "", "")
 	require.ErrorIs(t, err, service.ErrValidation)
 }
 
@@ -60,27 +60,29 @@ func TestAppointmentService_Transition_CancelRequiresReason(t *testing.T) {
 	repo := &fakeAppointmentRepo{}
 	svc := service.NewAppointmentService(repo)
 
-	_, err := svc.Transition(context.Background(), uuid.New(), uuid.New(), models.StatusCancelled, uuid.New(), "")
+	_, err := svc.Transition(context.Background(), uuid.New(), uuid.New(), models.StatusCancelled, uuid.New(), "", "")
 	require.ErrorIs(t, err, service.ErrValidation)
 }
 
 func TestAppointmentService_Transition_ForwardsValidCallToRepo(t *testing.T) {
 	tenantID, apptID, changedBy := uuid.New(), uuid.New(), uuid.New()
-	var gotReason string
+	var gotReason, gotCID string
 	repo := &fakeAppointmentRepo{
-		transitionFn: func(ctx context.Context, tid, id uuid.UUID, to models.AppointmentStatus, cb uuid.UUID, reason string) (*models.Appointment, error) {
+		transitionFn: func(ctx context.Context, tid, id uuid.UUID, to models.AppointmentStatus, cb uuid.UUID, reason, cid string) (*models.Appointment, error) {
 			assert.Equal(t, tenantID, tid)
 			assert.Equal(t, apptID, id)
 			assert.Equal(t, models.StatusCancelled, to)
 			assert.Equal(t, changedBy, cb)
 			gotReason = reason
+			gotCID = cid
 			return &models.Appointment{Status: to}, nil
 		},
 	}
 	svc := service.NewAppointmentService(repo)
 
-	result, err := svc.Transition(context.Background(), tenantID, apptID, models.StatusCancelled, changedBy, "patient requested")
+	result, err := svc.Transition(context.Background(), tenantID, apptID, models.StatusCancelled, changedBy, "patient requested", "F41.1")
 	require.NoError(t, err)
 	assert.Equal(t, models.StatusCancelled, result.Status)
 	assert.Equal(t, "patient requested", gotReason)
+	assert.Equal(t, "F41.1", gotCID)
 }

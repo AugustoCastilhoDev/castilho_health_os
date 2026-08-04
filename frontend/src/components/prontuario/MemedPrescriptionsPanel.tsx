@@ -4,13 +4,14 @@ import { useAuth } from '../../lib/auth/AuthContext'
 import { ApiError } from '../../lib/api/client'
 import { formatDateLong } from '../../lib/format'
 import { IssuePrescriptionModal } from './IssuePrescriptionModal'
+import { PRESCRIBER_ROLES } from '../../lib/roles'
 import type { MemedPrescriptionLogDTO, PatientDTO } from '../../lib/api/types'
 
 interface MemedPrescriptionsPanelProps {
   patient: PatientDTO
 }
 
-const CAN_ISSUE_ROLES = new Set(['DOCTOR', 'DENTIST'])
+const CAN_ISSUE_ROLES = PRESCRIBER_ROLES
 
 // This panel only ever shows the audit trail (who/when) — the prescription
 // content itself lives entirely in Memed, never here (see

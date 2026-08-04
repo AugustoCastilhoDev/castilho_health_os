@@ -58,6 +58,7 @@ export function AgendaPage() {
               scheduledAt: new Date(a.scheduled_at),
               durationMin: a.duration_min,
               status: a.status as AppointmentStatus,
+              cid: a.cid,
             })),
           )
         }

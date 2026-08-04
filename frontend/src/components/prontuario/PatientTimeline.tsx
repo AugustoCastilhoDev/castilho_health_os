@@ -21,6 +21,7 @@ export interface RecordTimelineEntry {
   professionalName: string
   type: MedicalRecordType
   content: string
+  cid?: string
   isLocked: boolean
   onEdit?: () => void
   onLock?: () => void
@@ -86,6 +87,9 @@ export function PatientTimeline({ entries }: PatientTimelineProps) {
                   </span>
                 )}
               </h3>
+              {entry.cid && (
+                <p className="mt-1 text-xs font-medium text-brand-text-muted">CID: {entry.cid}</p>
+              )}
               <div
                 className="rich-content mt-3 whitespace-pre-wrap text-sm text-brand-text"
                 dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(entry.content) }}

@@ -74,6 +74,7 @@ func (r *medicalRecordRepository) Update(ctx context.Context, tenantID uuid.UUID
 		Updates(map[string]any{
 			"type":    record.Type,
 			"content": record.Content,
+			"cid":     record.CID,
 		})
 	if result.Error != nil {
 		return result.Error

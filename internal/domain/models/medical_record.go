@@ -46,6 +46,15 @@ type MedicalRecord struct {
 	// whatever structured fields the editor's format exposes.
 	Content string `gorm:"type:text;not null" json:"content"`
 
+	// CID is a free-text diagnosis code (e.g. "F41.1 - Transtorno de
+	// ansiedade generalizada"), not validated against an official CID-10
+	// table — v1 scope is "let the professional type it," not a searchable
+	// catalog of ~14k codes. Optional; nil when no diagnosis is recorded.
+	// Explicit `column:cid` because GORM's default namer splits "CID" into
+	// "c_id" (it treats the "ID" suffix as the common initialism on its
+	// own), which doesn't match the migration's actual column name.
+	CID *string `gorm:"column:cid;type:varchar(255)" json:"cid,omitempty"`
+
 	// IsLocked marks a finalized record immutable for legal/compliance
 	// reasons (a prontuário can't be silently rewritten after the fact).
 	// This struct doesn't enforce that on its own — GORM will happily

@@ -1,0 +1,6 @@
+ALTER TABLE appointments DROP COLUMN IF EXISTS cid;
+ALTER TABLE medical_records DROP COLUMN IF EXISTS cid;
+
+ALTER TABLE users DROP CONSTRAINT users_role_check;
+ALTER TABLE users ADD CONSTRAINT users_role_check
+    CHECK (role IN ('TENANT_ADMIN', 'DOCTOR', 'DENTIST', 'RECEPTIONIST', 'FINANCE'));
